@@ -1,7 +1,7 @@
 package encoding_test
 
 import (
-	"github.com/xhaiker/ngx/encoding"
+	"github.com/ihaiker/ngx/encoding"
 	"testing"
 	"time"
 )

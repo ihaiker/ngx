@@ -2,7 +2,7 @@ package encoding
 
 import (
 	"fmt"
-	"github.com/xhaiker/ngx/config"
+	"github.com/ihaiker/ngx/config"
 	"os"
 	"reflect"
 	"strconv"

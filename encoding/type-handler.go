@@ -1,7 +1,7 @@
 package encoding
 
 import (
-	"github.com/xhaiker/ngx/config"
+	"github.com/ihaiker/ngx/config"
 	"reflect"
 )
 

@@ -1,10 +1,10 @@
 package ngx
 
 import (
-	"github.com/xhaiker/ngx/config"
-	"github.com/xhaiker/ngx/encoding"
-	"github.com/xhaiker/ngx/include"
-	"github.com/xhaiker/ngx/query"
+	"github.com/ihaiker/ngx/config"
+	"github.com/ihaiker/ngx/encoding"
+	"github.com/ihaiker/ngx/include"
+	"github.com/ihaiker/ngx/query"
 )
 
 var (

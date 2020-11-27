@@ -1,7 +1,7 @@
 package include
 
 import (
-	"github.com/xhaiker/ngx/config"
+	"github.com/ihaiker/ngx/config"
 )
 
 type (

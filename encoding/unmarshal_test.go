@@ -1,8 +1,8 @@
 package encoding_test
 
 import (
-	"github.com/xhaiker/ngx/config"
-	"github.com/xhaiker/ngx/encoding"
+	"github.com/ihaiker/ngx/config"
+	"github.com/ihaiker/ngx/encoding"
 	"strings"
 	"testing"
 	"time"
