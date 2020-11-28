@@ -39,12 +39,12 @@ func isBase(fieldType reflect.Type) bool {
 	switch fieldType.Kind() {
 	default:
 		return false
+	case reflect.Struct:
+		return fieldType.String() == "time.Time"
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 	case reflect.Float32, reflect.Float64:
 	case reflect.Bool, reflect.String:
-	case reflect.Struct:
-		return fieldType.String() == "time.Time"
 	}
 	return true
 }
@@ -104,9 +104,7 @@ func baseValue(fieldType reflect.Type, item *config.Directive, format string) (r
 	return v.Elem(), nil
 }
 
-func structValue(fieldType reflect.Type, items config.Directives) (reflect.Value, error) {
-	value := reflect.New(fieldType)
-
+func structValue(fieldType reflect.Type, value reflect.Value, items config.Directives) error {
 	body := config.Directives{}
 
 	for _, item := range items {
@@ -118,8 +116,9 @@ func structValue(fieldType reflect.Type, items config.Directives) (reflect.Value
 		}
 		body = append(body, item.Body...)
 	}
+
 	err := UnmarshalWith(value.Interface(), body)
-	return value.Elem(), err
+	return err
 }
 
 func mapValue(keyType, valueType reflect.Type, items config.Directives, format string) (reflect.Value, error) {
@@ -251,6 +250,9 @@ func Unmarshal(data []byte, v interface{}, opt *config.Options) error {
 }
 
 func UnmarshalWith(v interface{}, item config.Directives) error {
+	if len(item) == 0 {
+		return nil
+	}
 	if us, match := v.(Unmarshaler); match {
 		return us.UnmarshalNgx(item)
 	}
@@ -283,9 +285,9 @@ func UnmarshalWith(v interface{}, item config.Directives) error {
 					return err
 				} else {
 					value.Field(i).Set(v)
-					continue
 				}
 			}
+			continue
 		}
 
 		fieldValue := value.Field(i)
@@ -308,7 +310,7 @@ func assemblyValue(fieldType reflect.Type, value reflect.Value, item config.Dire
 	if fieldType.Kind() == reflect.Ptr {
 		if out, err := assemblyValue(fieldType.Elem(), value, item, format); err == nil {
 			v := reflect.New(fieldType.Elem())
-			v.Elem().Set(out)
+			v.Elem().Set(reflect.Indirect(out))
 			return v, nil
 		} else {
 			return out, err
@@ -346,10 +348,11 @@ func assemblyValue(fieldType reflect.Type, value reflect.Value, item config.Dire
 		return v, nil
 
 	case reflect.Struct:
-		return structValue(fieldType, item)
+		err := structValue(fieldType, value, item)
+		return value, err
 	}
 
-	return reflect.Value{}, os.ErrInvalid
+	return reflect.Value{}, fmt.Errorf("不支持: %s", fieldType.String())
 }
 
 func unmarshalNgx(value reflect.Value, idx int, fieldTagName string, items config.Directives) (bool, error) {
