@@ -23,3 +23,6 @@ var (
 )
 
 type Options = config.Options
+type Configuration = config.Configuration
+type Directive = config.Directive
+type Directives = config.Directives
