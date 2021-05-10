@@ -2,23 +2,8 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"strings"
 )
-
-func expectNextToken(it *tokenIterator, filter CharFilter) ([]string, string, error) {
-	tokens := make([]string, 0)
-	for {
-		if token, _, has := it.next(); has {
-			if filter(token, "") {
-				return tokens, token, nil
-			}
-			tokens = append(tokens, token)
-		} else {
-			return nil, "", os.ErrNotExist
-		}
-	}
-}
 
 func subDirectives(it *tokenIterator, opt *Options) ([]*Directive, error) {
 	directives := make([]*Directive, 0)
@@ -36,7 +21,7 @@ func subDirectives(it *tokenIterator, opt *Options) ([]*Directive, error) {
 				})
 			}
 		} else {
-			if args, lastToken, err := expectNextToken(it, In(";", "{")); err != nil {
+			if args, lastToken, err := it.expectNext(In(";", "{")); err != nil {
 				return nil, fmt.Errorf("not found end (%s) [;{] in %d", token, line)
 			} else if lastToken == ";" {
 				if opt.Delimiter {
@@ -101,7 +86,7 @@ func Parse(filename string, opt *Options) (*Configuration, error) {
 	return cfg, err
 }
 
-func ParseWith(bs []byte, opt *Options) (*Configuration, error) {
+func ParseWith(bs []byte, opt *Options) (cfg *Configuration, err error) {
 	if opt == nil {
 		opt = &Options{
 			Delimiter:        false,
@@ -109,11 +94,8 @@ func ParseWith(bs []byte, opt *Options) (*Configuration, error) {
 			RemoveAnnotation: false,
 		}
 	}
-	cfg := &Configuration{Name: "content.conf"}
-	it, err := newTokenIteratorWithBytes(bs, opt)
-	if err != nil {
-		return nil, err
-	}
+	cfg = &Configuration{Name: "content.conf"}
+	it := newTokenIteratorWithBytes(bs, opt)
 	cfg.Body, err = subDirectives(it, opt)
 	return cfg, err
 }

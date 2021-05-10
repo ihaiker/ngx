@@ -3,22 +3,49 @@ package encoding
 import (
 	"github.com/ihaiker/ngx/config"
 	"reflect"
+	"time"
 )
 
 type (
-	TypeHandler func(fieldType reflect.Type, item config.Directives) interface{}
+	TypeHandler interface {
+		MarshalNgx(v interface{}) (config.Directives, error)
+		UnmarshalNgx(item config.Directives) (v interface{}, err error)
+	}
 	typeManager map[reflect.Type]TypeHandler
+	Options     struct {
+		DateFormat   string
+		TypeHandlers typeManager
+	}
 )
 
-func (h *typeManager) dealWith(fieldType reflect.Type, item config.Directives) (reflect.Value, bool) {
-	if handler, has := (*h)[fieldType]; has {
-		v := handler(fieldType, item)
-		return reflect.ValueOf(v), true
+func (h typeManager) UnmarshalNgx(fieldType reflect.Type, item config.Directives) (value reflect.Value, handlered bool, err error) {
+	if handler, has := h[fieldType]; has {
+		handlered = true
+		var val interface{}
+		val, err = handler.UnmarshalNgx(item)
+		value = reflect.ValueOf(val)
+		if fieldType.Kind() != reflect.Ptr {
+			value = value.Elem()
+		}
 	}
-	return reflect.Value{}, false
+	return
 }
 
-func (h *typeManager) With(fieldType reflect.Type, handler TypeHandler) *typeManager {
+func (h typeManager) MarshalNgx(val interface{}) (items config.Directives, handlered bool, err error) {
+	fieldType := reflect.ValueOf(val).Type()
+	if handler, has := h[fieldType]; has {
+		handlered = true
+		items, err = handler.MarshalNgx(val)
+	}
+	return
+}
+
+func (h *typeManager) Reg(v interface{}, handler TypeHandler) *typeManager {
+	if v == nil {
+		return h
+	}
+
+	fieldType := reflect.ValueOf(v).Type()
 	(*h)[fieldType] = handler
 	if fieldType.Kind() == reflect.Ptr {
 		(*h)[fieldType.Elem()] = handler
@@ -28,4 +55,7 @@ func (h *typeManager) With(fieldType reflect.Type, handler TypeHandler) *typeMan
 	return h
 }
 
-var Defaults = new(typeManager)
+var Defaults = &Options{
+	DateFormat:   time.RFC3339,
+	TypeHandlers: map[reflect.Type]TypeHandler{},
+}

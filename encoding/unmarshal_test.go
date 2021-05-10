@@ -1,17 +1,17 @@
-package encoding_test
+package encoding
 
 import (
 	"github.com/ihaiker/ngx/config"
-	"github.com/ihaiker/ngx/encoding"
+	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 	"time"
 )
 
 type Test struct {
-	Name    string    `ngx:"name"`
-	Address string    `ngx:"address"`
-	Create  time.Time `ngx:"time,2006-01-02 15:04:05"`
+	Name    string     `ngx:"name"`
+	Address string     `ngx:"address"`
+	Create  *time.Time `ngx:"time,2006-01-02 15:04:05"`
 	Age     int
 
 	Sub *TestSub `ngx:"sub"`
@@ -37,14 +37,6 @@ func (t *TestSub) UnmarshalNgx(items config.Directives) error {
 	}
 	return nil
 }
-
-/*
-func (t *Test) UnmarshalNgx(item config.Directives) error {
-	t.Name = item.Get("name").Args[0]
-	t.Address = item.Get("address").Args[0]
-	return nil
-}
-*/
 
 func TestUnmarshal(t *testing.T) {
 	tt := new(Test)
@@ -81,15 +73,13 @@ func TestUnmarshal(t *testing.T) {
 			demo: "demo ary 2";
 		}
 	`)
-	opt := &config.Options{
-		Delimiter:        true,
-		RemoveBrackets:   true,
-		RemoveAnnotation: true,
-	}
-	if err := encoding.Unmarshal(data, tt, opt); err != nil {
-		t.Fatal(err)
-	}
-	t.Log(tt.Demos)
-	t.Log(strings.Join(tt.Tags, ","))
-	t.Log(tt.DemoAry)
+
+	err := Unmarshal(data, tt)
+	require.Nil(t, err)
+	require.Equal(t, tt.Name, "姓名")
+	require.Equal(t, tt.Address, "地址")
+	require.Len(t, tt.Demos, 3)
+	require.Equal(t, tt.Age, 20)
+	require.Len(t, tt.Tags, 4)
+	require.Equal(t, tt.Tags[1], "t2")
 }

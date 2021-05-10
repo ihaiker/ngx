@@ -23,6 +23,9 @@ func selectOne(directives []*config.Directive, q string) ([]*config.Directive, e
 	return matched, nil
 }
 
+//Selects 查询配置内容。
+// server.[server_name('_') & listen('8081' | '8080')]
+//
 func Selects(conf *config.Configuration, queries ...string) ([]*config.Directive, error) {
 	current := []*config.Directive{conf}
 	for _, q := range queries {

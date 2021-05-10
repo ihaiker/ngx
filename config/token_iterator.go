@@ -1,6 +1,9 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+)
 
 type tokenIterator struct {
 	it  *charIterator
@@ -16,13 +19,10 @@ func newTokenIterator(filename string, opt *Options) (*tokenIterator, error) {
 	return tokenIt, nil
 }
 
-func newTokenIteratorWithBytes(bs []byte, opt *Options) (*tokenIterator, error) {
-	chatIt, err := newCharIteratorWithBytes(bs)
-	if err != nil {
-		return nil, err
-	}
+func newTokenIteratorWithBytes(bs []byte, opt *Options) *tokenIterator {
+	chatIt := newCharIteratorWithBytes(bs)
 	tokenIt := &tokenIterator{it: chatIt, opt: opt}
-	return tokenIt, nil
+	return tokenIt
 }
 
 func (self *tokenIterator) next() (token string, tokenLine int, tokenHas bool) {
@@ -71,6 +71,21 @@ func (self *tokenIterator) next() (token string, tokenLine int, tokenHas bool) {
 			tokenLine = line
 			tokenHas = true
 			return
+		}
+	}
+}
+
+func (self *tokenIterator) expectNext(filter Filter) (tokens []string, lastToken string, err error) {
+	tokens = make([]string, 0)
+	for {
+		if token, _, has := self.next(); has {
+			if filter(token, "") {
+				lastToken = token
+				return
+			}
+			tokens = append(tokens, token)
+		} else {
+			return tokens, "", io.EOF
 		}
 	}
 }

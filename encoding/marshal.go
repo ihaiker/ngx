@@ -13,7 +13,7 @@ type Marshaler interface {
 }
 
 func Marshal(v interface{}) ([]byte, error) {
-	cfg, err := MarshalConfig(v, time.RFC3339)
+	cfg, err := MarshalOptions(v, *Defaults)
 	if err != nil {
 		return nil, err
 	}
@@ -21,7 +21,15 @@ func Marshal(v interface{}) ([]byte, error) {
 	return c.BodyBytes(), nil
 }
 
-func MarshalConfig(v interface{}, format string) (config.Directives, error) {
+func MarshalWithOptions(v interface{}, options Options) ([]byte, error) {
+	items, err := MarshalOptions(v, options)
+	if err != nil {
+		return nil, err
+	}
+	return config.Body("content", items...).BodyBytes(), nil
+}
+
+func MarshalOptions(v interface{}, opt Options) (config.Directives, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -36,10 +44,14 @@ func MarshalConfig(v interface{}, format string) (config.Directives, error) {
 		value = value.Elem()
 	}
 
+	if items, handlered, err := opt.TypeHandlers.MarshalNgx(v); err != nil || handlered {
+		return items, err
+	}
+
 	items := config.Directives{}
 	if valueType.String() == "time.Time" {
 		t := value.Interface().(time.Time)
-		return config.Directives{config.New("key", t.Format(format))}, nil
+		return config.Directives{config.New("key", strconv.Quote(t.Format(opt.DateFormat)))}, nil
 	}
 
 	switch valueType.Kind() {
@@ -57,9 +69,9 @@ func MarshalConfig(v interface{}, format string) (config.Directives, error) {
 		for mr := value.MapRange(); mr.Next(); {
 			item := config.New(mr.Key().String())
 			if isBase(valueType.Elem()) {
-				item.AddArgs(mr.Value().String())
+				item.AddArgs(strconv.Quote(mr.Value().String()))
 			} else {
-				if d, err := MarshalConfig(mr.Value().Interface(), format); err != nil {
+				if d, err := MarshalOptions(mr.Value().Interface(), opt); err != nil {
 					return nil, err
 				} else {
 					item.AddBodyDirective(d...)
@@ -71,8 +83,8 @@ func MarshalConfig(v interface{}, format string) (config.Directives, error) {
 		if isBase(valueType.Elem()) {
 			ary := config.New("array")
 			for i := 0; i < value.Len(); i++ {
-				v := value.Index(i).Interface()
-				if vItem, err := MarshalConfig(v, format); err != nil {
+				val := value.Index(i).Interface()
+				if vItem, err := MarshalOptions(val, opt); err != nil {
 					return nil, err
 				} else {
 					for _, item := range vItem {
@@ -84,8 +96,8 @@ func MarshalConfig(v interface{}, format string) (config.Directives, error) {
 		} else {
 			for i := 0; i < value.Len(); i++ {
 				ary := config.New("array")
-				v := value.Index(i).Interface()
-				if vItem, err := MarshalConfig(v, format); err != nil {
+				val := value.Index(i).Interface()
+				if vItem, err := MarshalOptions(val, opt); err != nil {
 					return nil, err
 				} else {
 					ary.AddBodyDirective(vItem...)
@@ -108,21 +120,26 @@ func MarshalConfig(v interface{}, format string) (config.Directives, error) {
 				continue
 			}
 
-			fieldName, f := split2(field.Tag.Get("ngx"), ",")
+			fieldName, format := split2(field.Tag.Get("ngx"), ",")
 			if fieldName == "" {
 				fieldName = field.Name
 			}
 
-			if confItems, err := MarshalConfig(fieldValue.Interface(), f); err != nil {
-				return nil, err
+			if fieldValue.Kind().String() == "time.Time" {
+				val := fieldValue.Interface().(time.Time).Format(format)
+				items = append(items, config.New(fieldName, val))
 			} else {
-				if isBase(field.Type) || field.Type.Kind() == reflect.Slice {
-					for _, item := range confItems {
-						item.Name = fieldName
-						items = append(items, item)
-					}
+				if confItems, err := MarshalOptions(fieldValue.Interface(), opt); err != nil {
+					return nil, err
 				} else {
-					items = append(items, config.Body(fieldName, confItems...))
+					if isBase(field.Type) || field.Type.Kind() == reflect.Slice {
+						for _, item := range confItems {
+							item.Name = fieldName
+							items = append(items, item)
+						}
+					} else {
+						items = append(items, config.Body(fieldName, confItems...))
+					}
 				}
 			}
 		}

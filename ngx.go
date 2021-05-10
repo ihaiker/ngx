@@ -19,7 +19,7 @@ var (
 	Marshal = encoding.Marshal
 
 	Unmarshal   = encoding.Unmarshal
-	MarshalWith = encoding.UnmarshalWith
+	MarshalWith = encoding.UnmarshalDirectives
 )
 
 type Options = config.Options

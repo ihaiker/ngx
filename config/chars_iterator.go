@@ -17,16 +17,16 @@ func newCharIterator(filename string) (*charIterator, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newCharIteratorWithBytes(bs)
+	return newCharIteratorWithBytes(bs), nil
 }
 
-func newCharIteratorWithBytes(bs []byte) (*charIterator, error) {
+func newCharIteratorWithBytes(bs []byte) *charIterator {
 	s := bufio.NewScanner(bytes.NewBuffer(bs))
 	s.Split(bufio.ScanRunes)
-	return &charIterator{scanner: s, currentLine: 1}, nil
+	return &charIterator{scanner: s, currentLine: 1}
 }
 
-func (self *charIterator) nextFilter(filter CharFilter) (word string, line int, has bool) {
+func (self *charIterator) nextFilter(filter Filter) (word string, line int, has bool) {
 	previous := ""
 	for {
 		if word, line, has = self.next(); !has {
@@ -40,7 +40,7 @@ func (self *charIterator) nextFilter(filter CharFilter) (word string, line int, 
 }
 
 //不包括最后一个
-func (self *charIterator) nextTo(filter CharFilter, includeLast bool) (word string, line int, has bool) {
+func (self *charIterator) nextTo(filter Filter, includeLast bool) (word string, line int, has bool) {
 	lastChar := ""
 	for {
 		if lastChar, line, has = self.next(); !has {
