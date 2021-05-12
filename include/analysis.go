@@ -30,7 +30,7 @@ func Walk(cfg *config.Configuration, walk IsWalk, search WalkSearch, opt *config
 					item.Body = append(item.Body, ds...)
 				}
 			} else {
-				if err := Walk(item, walk, search, opt); err != nil {
+				if err := Walk(config.Config(item), walk, search, opt); err != nil {
 					return err
 				}
 			}

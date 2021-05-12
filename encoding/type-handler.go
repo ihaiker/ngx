@@ -8,8 +8,8 @@ import (
 
 type (
 	TypeHandler interface {
-		MarshalNgx(v interface{}) (config.Directives, error)
-		UnmarshalNgx(item config.Directives) (v interface{}, err error)
+		MarshalNgx(v interface{}) (*config.Configuration, error)
+		UnmarshalNgx(item *config.Configuration) (v interface{}, err error)
 	}
 	typeManager map[reflect.Type]TypeHandler
 	Options     struct {
@@ -18,7 +18,16 @@ type (
 	}
 )
 
-func (h typeManager) UnmarshalNgx(fieldType reflect.Type, item config.Directives) (value reflect.Value, handlered bool, err error) {
+func encodingOptions() *config.Options {
+	return &config.Options{
+		Delimiter:     true,
+		RemoveQuote:   true,
+		RemoveCommits: true,
+		MergeInclude:  true,
+	}
+}
+
+func (h typeManager) UnmarshalNgx(fieldType reflect.Type, item *config.Configuration) (value reflect.Value, handlered bool, err error) {
 	if handler, has := h[fieldType]; has {
 		handlered = true
 		var val interface{}
@@ -31,7 +40,7 @@ func (h typeManager) UnmarshalNgx(fieldType reflect.Type, item config.Directives
 	return
 }
 
-func (h typeManager) MarshalNgx(val interface{}) (items config.Directives, handlered bool, err error) {
+func (h typeManager) MarshalNgx(val interface{}) (items *config.Configuration, handlered bool, err error) {
 	fieldType := reflect.ValueOf(val).Type()
 	if handler, has := h[fieldType]; has {
 		handlered = true
@@ -55,7 +64,15 @@ func (h *typeManager) Reg(v interface{}, handler TypeHandler) *typeManager {
 	return h
 }
 
-var Defaults = &Options{
-	DateFormat:   time.RFC3339,
-	TypeHandlers: map[reflect.Type]TypeHandler{},
+var defaults = DefaultOptions()
+
+func DefaultOptions() *Options {
+	return &Options{
+		DateFormat:   time.RFC3339,
+		TypeHandlers: map[reflect.Type]TypeHandler{},
+	}
+}
+
+func RegTypeHandler(v interface{}, handler TypeHandler) {
+	defaults.TypeHandlers.Reg(v, handler)
 }

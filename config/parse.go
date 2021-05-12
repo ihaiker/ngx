@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"strings"
 )
 
@@ -15,29 +17,26 @@ func subDirectives(it *tokenIterator, opt *Options) ([]*Directive, error) {
 		if token == ";" || token == "}" {
 			break
 		} else if token[0] == '#' { //注释
-			if !opt.RemoveAnnotation {
+			if !opt.RemoveCommits {
 				directives = append(directives, &Directive{
 					Line: line, Name: "#", Args: []string{strings.Trim(token[1:], " ")},
 				})
 			}
 		} else {
+
+			if opt.Delimiter {
+				if strings.HasSuffix(token, ":") {
+					token = token[0 : len(token)-1]
+				}
+			}
+
 			if args, lastToken, err := it.expectNext(In(";", "{")); err != nil {
 				return nil, fmt.Errorf("not found end (%s) [;{] in %d", token, line)
 			} else if lastToken == ";" {
-				if opt.Delimiter {
-					if strings.HasSuffix(token, ":") {
-						token = token[0 : len(token)-1]
-					}
-				}
 				directives = append(directives, &Directive{
 					Line: line, Name: token, Args: args,
 				})
 			} else {
-				if opt.Delimiter {
-					if strings.HasSuffix(token, ":") {
-						token = token[0 : len(token)-1]
-					}
-				}
 				directive := &Directive{
 					Line: line, Name: token, Args: args,
 				}
@@ -69,33 +68,51 @@ func MustParseWith(bs []byte, opt *Options) *Configuration {
 	return cfg
 }
 
-func Parse(filename string, opt *Options) (*Configuration, error) {
-	if opt == nil {
-		opt = &Options{
-			Delimiter:        false,
-			RemoveBrackets:   false,
-			RemoveAnnotation: false,
-		}
-	}
-	cfg := &Configuration{Name: filename}
-	it, err := newTokenIterator(filename, opt)
+func MustParseIO(reader io.Reader, options *Options) *Configuration {
+	cfg, err := ParseIO(reader, options)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-	cfg.Body, err = subDirectives(it, opt)
-	return cfg, err
+	return cfg
 }
 
-func ParseWith(bs []byte, opt *Options) (cfg *Configuration, err error) {
-	if opt == nil {
-		opt = &Options{
-			Delimiter:        false,
-			RemoveBrackets:   false,
-			RemoveAnnotation: false,
+func parse(bs []byte, cfg *Configuration) (err error) {
+	if cfg.Options == nil {
+		cfg.Options = &Options{
+			Delimiter:     true,
+			RemoveQuote:   false,
+			RemoveCommits: false,
+			MergeInclude:  false,
 		}
 	}
-	cfg = &Configuration{Name: "content.conf"}
-	it := newTokenIteratorWithBytes(bs, opt)
-	cfg.Body, err = subDirectives(it, opt)
-	return cfg, err
+	it := newTokenIteratorWithBytes(bs, cfg.Options)
+	cfg.Body, err = subDirectives(it, cfg.Options)
+	return
+}
+
+func Parse(filename string, options *Options) (cfg *Configuration, err error) {
+	cfg = &Configuration{Source: fmt.Sprintf("file://%s", filename)}
+	cfg.Options = options
+	var bs []byte
+	if bs, err = ioutil.ReadFile(filename); err != nil {
+		return
+	}
+	err = parse(bs, cfg)
+	return
+}
+
+func ParseIO(reader io.Reader, options *Options) (cfg *Configuration, err error) {
+	var bs []byte
+	if bs, err = ioutil.ReadAll(reader); err != nil {
+		return
+	}
+	cfg = &Configuration{Source: "io", Options: options}
+	err = parse(bs, cfg)
+	return
+}
+
+func ParseWith(bs []byte, options *Options) (cfg *Configuration, err error) {
+	cfg = &Configuration{Source: "bytes", Options: options}
+	err = parse(bs, cfg)
+	return
 }

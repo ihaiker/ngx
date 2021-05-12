@@ -27,7 +27,7 @@ func selectOne(directives []*config.Directive, q string) ([]*config.Directive, e
 // server.[server_name('_') & listen('8081' | '8080')]
 //
 func Selects(conf *config.Configuration, queries ...string) ([]*config.Directive, error) {
-	current := []*config.Directive{conf}
+	current := conf.Body //[]*config.Directive{conf}
 	for _, q := range queries {
 		directives, err := selectOne(current, q)
 		if err != nil {

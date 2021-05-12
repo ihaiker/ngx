@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -17,7 +18,11 @@ type (
 		Body    Directives `json:"body,omitempty"`
 	}
 	Directives    []*Directive
-	Configuration = Directive
+	Configuration struct {
+		Source  string
+		Options *Options
+		Body    Directives
+	}
 )
 
 var Include Virtual = "include"
@@ -28,18 +33,16 @@ func New(name string, args ...string) *Directive {
 func Body(name string, body ...*Directive) *Directive {
 	return &Directive{Name: name, Body: body}
 }
+func Config(body ...*Directive) *Configuration {
+	return &Configuration{
+		Source:  "",
+		Options: Default(),
+		Body:    body,
+	}
+}
 
 func (d *Directive) String() string {
 	return d.Pretty(0)
-}
-
-func (d *Directive) BodyBytes() []byte {
-	out := bytes.NewBufferString("")
-	for _, body := range d.Body {
-		out.WriteString(body.Pretty(0))
-		out.WriteString("\n")
-	}
-	return out.Bytes()
 }
 
 func (d *Directive) noBody() bool {
@@ -66,25 +69,41 @@ func (d *Directive) AddArgs(args ...string) *Directive {
 	return d
 }
 
-func (d *Directive) AddBodyDirective(directive ...*Directive) {
+func (d *Directive) AddBodyDirective(directives ...*Directive) {
 	if d.Body == nil {
 		d.Body = make([]*Directive, 0)
 	}
-	d.Body = append(d.Body, directive...)
+	d.Body = append(d.Body, directives...)
 }
 
-func (d *Directive) Pretty(prefix int) string {
+func (d *Directive) PrettyOptions(prefix int, options Options) string {
 	prefixString := strings.Repeat(" ", prefix*4)
 	if d.Name == "#" {
+		if options.RemoveCommits {
+			return ""
+		}
 		return fmt.Sprintf("%s# %s", prefixString, d.Args[0])
 	} else if d.Virtual != "" {
 		return ""
 	} else {
 		out := bytes.NewBufferString(prefixString)
 		out.WriteString(d.Name)
-		out.WriteString(" ")
-		if len(d.Args) > 0 {
-			out.WriteString(strings.Join(d.Args, " "))
+
+		for i, arg := range d.Args {
+			if i == 0 {
+				if options.Delimiter {
+					out.WriteString(":")
+				}
+			}
+
+			out.WriteByte(' ')
+
+			if options.RemoveQuote && strings.ContainsAny(arg, "\"'` \t\n") {
+				out.WriteString(strconv.Quote(arg))
+				continue
+			}
+
+			out.WriteString(arg)
 		}
 
 		if d.noBody() {
@@ -93,12 +112,28 @@ func (d *Directive) Pretty(prefix int) string {
 			out.WriteString(" {")
 			for _, body := range d.Body {
 				out.WriteString("\n")
-				out.WriteString(body.Pretty(prefix + 1))
+				out.WriteString(body.PrettyOptions(prefix+1, options))
 			}
 			out.WriteString(fmt.Sprintf("\n%s}", prefixString))
 		}
 		return out.String()
 	}
+}
+
+func (d *Directive) Pretty(prefix int) string {
+	return d.PrettyOptions(prefix, *def)
+}
+
+func (cfg *Configuration) Pretty() string {
+	out := bytes.NewBufferString("")
+	for i, item := range cfg.Body {
+		if i != 0 {
+			out.WriteByte('\n')
+		}
+		itemString := item.PrettyOptions(0, *cfg.Options)
+		_, _ = out.WriteString(itemString)
+	}
+	return out.String()
 }
 
 func (ds *Directives) Get(name string) *Directive {
@@ -119,4 +154,19 @@ func (ds *Directives) Gets(name string) (ret []*Directive) {
 		}
 	}
 	return
+}
+
+func (ds Directives) Index(idx int) *Directive {
+	if idx < 0 || idx > len(ds)-1 {
+		return nil
+	}
+	return ds[idx]
+}
+
+func (ds *Directives) Insert(d *Directive, idx int) {
+	*ds = append((*ds)[:idx], append([]*Directive{d}, (*ds)[idx:]...)...)
+}
+
+func (ds *Directives) Append(d *Directive) {
+	*ds = append(*ds, d)
 }

@@ -53,7 +53,7 @@ func (self *tokenIterator) next() (token string, tokenLine int, tokenHas bool) {
 				if !wordHas {
 					panic(fmt.Errorf("error at line : %d", line))
 				}
-				if self.opt.RemoveBrackets {
+				if self.opt.RemoveQuote {
 					token = word[0 : len(word)-1] //去除文本括号
 				} else {
 					token = char + word

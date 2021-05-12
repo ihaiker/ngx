@@ -10,39 +10,46 @@ import (
 )
 
 type Unmarshaler interface {
-	UnmarshalNgx(item config.Directives) error
+	UnmarshalNgx(item *config.Configuration) error
 }
 
 func Unmarshal(data []byte, v interface{}) error {
-	return UnmarshalWithOptions(data, v, *Defaults)
+	return UnmarshalWithOptions(data, v, *defaults)
 }
 
-func UnmarshalWithOptions(data []byte, v interface{}, opt Options) error {
+func UnmarshalWithOptions(data []byte, v interface{}, options Options) error {
+	if v == nil {
+		return fmt.Errorf("the value is empty")
+	}
 	if reflect.ValueOf(v).Kind() != reflect.Ptr {
 		return fmt.Errorf("%s not be a interface", reflect.TypeOf(v))
 	}
-	parseOptions := &config.Options{
-		Delimiter:        true,
-		RemoveBrackets:   true,
-		RemoveAnnotation: true,
-		MergeInclude:     true,
-	}
-	if conf, err := config.ParseWith(data, parseOptions); err != nil {
+
+	if conf, err := config.ParseWith(data, encodingOptions()); err != nil {
 		return err
 	} else {
-		return UnmarshalDirectives(v, conf.Body, opt)
+		return UnmarshalDirectives(v, conf, options)
 	}
 }
 
-func UnmarshalDirectives(v interface{}, item config.Directives, opt Options) error {
-	if len(item) == 0 {
-		return nil
-	}
+func UnmarshalDirectives(v interface{}, cfg *config.Configuration, options Options) error {
 	if us, match := v.(Unmarshaler); match {
-		return us.UnmarshalNgx(item)
+		return us.UnmarshalNgx(cfg)
+	}
+
+	if cfg == nil || len(cfg.Body) == 0 {
+		return nil
 	}
 
 	value := reflectValue(v)
+
+	if val, handled, err := options.TypeHandlers.UnmarshalNgx(value.Type(), cfg); err != nil {
+		return err
+	} else if handled {
+		value.Set(val)
+		return nil
+	}
+
 	for i := 0; i < value.Type().NumField(); i++ {
 		field := value.Type().Field(i)
 		tag := field.Tag.Get("ngx")
@@ -55,21 +62,31 @@ func UnmarshalDirectives(v interface{}, item config.Directives, opt Options) err
 			fieldTagName = field.Name
 		}
 
-		//实现了 Unmarshaler
-		if has, err := unmarshalNgx(value, i, fieldTagName, item); err != nil {
+		items := cfg.Body.Gets(fieldTagName)
+		if len(items) == 0 {
+			continue
+		}
+
+		//当用户指定了 TypeHandler 或者实现了 Unmarshaler
+		itemConfig := directive2Conf(items[0])
+
+		//实现了 Unmarshaler, 这种情况下只能使用
+		if has, err := unmarshalNgx(value, i, fieldTagName, itemConfig); err != nil {
 			return err
 		} else if has {
 			continue
 		}
 
-		if val, has, err := opt.TypeHandlers.UnmarshalNgx(field.Type, item.Gets(fieldTagName)); err != nil {
+		if val, has, err := options.TypeHandlers.UnmarshalNgx(field.Type, itemConfig); err != nil {
 			return err
 		} else if has {
 			value.Field(i).Set(val)
 			continue
-		} else if isBase(field.Type) {
-			if d := item.Get(fieldTagName); d != nil {
-				if val, err = baseValue(field.Type, d, format); err != nil {
+		}
+
+		if isBase(field.Type) {
+			if d := cfg.Body.Get(fieldTagName); d != nil {
+				if val, err := baseValue(field.Type, d, format); err != nil {
 					return err
 				} else {
 					value.Field(i).Set(val)
@@ -79,7 +96,7 @@ func UnmarshalDirectives(v interface{}, item config.Directives, opt Options) err
 		}
 
 		fieldValue := value.Field(i)
-		if v, err := assemblyValue(field.Type, fieldValue, item.Gets(fieldTagName), opt); err == nil {
+		if v, err := assemblyValue(field.Type, fieldValue, items, options); err == nil {
 			if isPtr(field.Type) {
 				fieldValue.Set(v)
 			} else {
@@ -185,21 +202,22 @@ func baseValue(fieldType reflect.Type, item *config.Directive, format string) (r
 	return v.Elem(), nil
 }
 
-func structValue(fieldType reflect.Type, value reflect.Value, items config.Directives, opt Options) error {
-	body := config.Directives{}
+func structValue(fieldType reflect.Type, fieldValue reflect.Value, items config.Directives, opt Options) (reflect.Value, error) {
+	value := reflect.New(fieldType)
 
+	body := conf()
 	for _, item := range items {
 		for _, arg := range item.Args {
 			fieldName, fieldValue := compileSplit2(arg, ":|=")
-			body = append(body, &config.Directive{
+			body.Body = append(body.Body, &config.Directive{
 				Name: fieldName, Args: []string{fieldValue}, Line: item.Line,
 			})
 		}
-		body = append(body, item.Body...)
+		body.Body = append(body.Body, item.Body...)
 	}
 
 	err := UnmarshalDirectives(value.Interface(), body, opt)
-	return err
+	return value, err
 }
 
 func mapValue(keyType, valueType reflect.Type, items config.Directives, opt Options) (reflect.Value, error) {
@@ -238,7 +256,7 @@ func mapValue(keyType, valueType reflect.Type, items config.Directives, opt Opti
 				}
 			}
 		} else { //非基本类型
-			setMap := func(key string, bodyItems config.Directives) error {
+			setMap := func(key string, cfg *config.Configuration) error {
 				keyValue, err := baseValue(keyType, config.New("key", key), opt.DateFormat)
 				if err != nil {
 					return err
@@ -249,8 +267,7 @@ func mapValue(keyType, valueType reflect.Type, items config.Directives, opt Opti
 					vs = reflect.New(valueType.Elem())
 				}
 
-				d := config.Directives{{Name: key, Body: bodyItems}}
-				if err := UnmarshalDirectives(vs.Interface(), d, opt); err != nil {
+				if err := UnmarshalDirectives(vs.Interface(), cfg, opt); err != nil {
 					return err
 				}
 				if isPtr(valueType) {
@@ -262,12 +279,12 @@ func mapValue(keyType, valueType reflect.Type, items config.Directives, opt Opti
 			}
 
 			if len(item.Args) == 1 {
-				if err := setMap(item.Args[0], item.Body); err != nil {
+				if err := setMap(item.Args[0], conf(item.Body...)); err != nil {
 					return reflect.Value{}, err
 				}
 			} else {
 				for _, sub := range item.Body {
-					if err := setMap(sub.Name, sub.Body); err != nil {
+					if err := setMap(sub.Name, conf(sub.Body...)); err != nil {
 						return reflect.Value{}, err
 					}
 				}
@@ -305,7 +322,7 @@ func sliceValue(sliceType reflect.Type, items config.Directives, opt Options) (r
 			if isPtr(sliceType) {
 				vs = reflect.New(sliceType.Elem())
 			}
-			if err := UnmarshalDirectives(vs.Interface(), config.Directives{item}, opt); err != nil {
+			if err := UnmarshalDirectives(vs.Interface(), conf(item.Body...), opt); err != nil {
 				return reflect.Value{}, nil
 			} else {
 				if isPtr(sliceType) {
@@ -319,10 +336,10 @@ func sliceValue(sliceType reflect.Type, items config.Directives, opt Options) (r
 	}
 }
 
-func assemblyValue(fieldType reflect.Type, value reflect.Value, item config.Directives, opt Options) (reflect.Value, error) {
+func assemblyValue(fieldType reflect.Type, fieldValue reflect.Value, items config.Directives, opt Options) (reflect.Value, error) {
 	//所有处理按照interface处理
 	if fieldType.Kind() == reflect.Ptr {
-		if out, err := assemblyValue(fieldType.Elem(), value, item, opt); err == nil {
+		if out, err := assemblyValue(fieldType.Elem(), fieldValue, items, opt); err == nil {
 			v := reflect.New(fieldType.Elem())
 			v.Elem().Set(reflect.Indirect(out))
 			return v, nil
@@ -333,43 +350,43 @@ func assemblyValue(fieldType reflect.Type, value reflect.Value, item config.Dire
 
 	switch fieldType.Kind() {
 	case reflect.Array:
-		//return reflect.Value{}, fmt.Errorf("Invalid %s", item.Name)
+		//return reflect.Value{}, fmt.Errorf("Invalid %s", items.Name)
 
 	case reflect.Map:
-		v := reflect.New(fieldType)
-		m, err := mapValue(fieldType.Key(), fieldType.Elem(), item, opt)
+		val := reflect.New(fieldType)
+		m, err := mapValue(fieldType.Key(), fieldType.Elem(), items, opt)
 		if err != nil {
-			return v, err
+			return val, err
 		}
-		if value.IsValid() {
-			for mr := value.MapRange(); mr.Next(); {
+		if fieldValue.IsValid() {
+			for mr := fieldValue.MapRange(); mr.Next(); {
 				m.SetMapIndex(mr.Key(), mr.Value())
 			}
 		}
-		v.Elem().Set(m)
-		return v, nil
+		val.Elem().Set(m)
+		return val, nil
 
 	case reflect.Slice:
-		v := reflect.New(fieldType)
-		slice, err := sliceValue(fieldType.Elem(), item, opt)
+		val := reflect.New(fieldType)
+		slice, err := sliceValue(fieldType.Elem(), items, opt)
 		if err != nil {
-			return v, err
+			return val, err
 		}
-		v.Elem().Set(slice)
-		if value.IsValid() {
-			v.Elem().Set(reflect.AppendSlice(value, slice))
+		val.Elem().Set(slice)
+		if fieldValue.IsValid() {
+			val.Elem().Set(reflect.AppendSlice(fieldValue, slice))
 		}
-		return v, nil
+		return val, nil
 
 	case reflect.Struct:
-		err := structValue(fieldType, value, item, opt)
-		return value, err
+		val, err := structValue(fieldType, fieldValue, items, opt)
+		return val, err
 	}
 
 	return reflect.Value{}, fmt.Errorf("不支持: %s", fieldType.String())
 }
 
-func unmarshalNgx(value reflect.Value, idx int, fieldTagName string, items config.Directives) (bool, error) {
+func unmarshalNgx(value reflect.Value, idx int, fieldTagName string, config *config.Configuration) (bool, error) {
 	field := value.Type().Field(idx)
 
 	var fieldValue reflect.Value
@@ -380,7 +397,7 @@ func unmarshalNgx(value reflect.Value, idx int, fieldTagName string, items confi
 	}
 
 	if us, match := fieldValue.Interface().(Unmarshaler); match {
-		if err := us.UnmarshalNgx(items.Gets(fieldTagName)); err != nil {
+		if err := us.UnmarshalNgx(config); err != nil {
 			return false, err
 		}
 		if isPtr(field.Type) {

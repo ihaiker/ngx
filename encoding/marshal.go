@@ -9,27 +9,33 @@ import (
 )
 
 type Marshaler interface {
-	MarshalNgx() (config.Directives, error)
+	MarshalNgx() (*config.Configuration, error)
 }
 
 func Marshal(v interface{}) ([]byte, error) {
-	cfg, err := MarshalOptions(v, *Defaults)
-	if err != nil {
-		return nil, err
-	}
-	c := config.Body("content", cfg...)
-	return c.BodyBytes(), nil
+	return MarshalWithOptions(v, *defaults)
 }
 
 func MarshalWithOptions(v interface{}, options Options) ([]byte, error) {
-	items, err := MarshalOptions(v, options)
+	cfg, err := MarshalOptions(v, options)
 	if err != nil {
 		return nil, err
 	}
-	return config.Body("content", items...).BodyBytes(), nil
+	return []byte(cfg.Pretty()), nil
 }
 
-func MarshalOptions(v interface{}, opt Options) (config.Directives, error) {
+func conf(items ...*config.Directive) *config.Configuration {
+	return &config.Configuration{
+		Source: "code", Options: encodingOptions(), Body: items,
+	}
+}
+func directive2Conf(item *config.Directive) *config.Configuration {
+	return &config.Configuration{
+		Source: "code", Options: encodingOptions(), Body: item.Body,
+	}
+}
+
+func MarshalOptions(v interface{}, options Options) (*config.Configuration, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -44,37 +50,38 @@ func MarshalOptions(v interface{}, opt Options) (config.Directives, error) {
 		value = value.Elem()
 	}
 
-	if items, handlered, err := opt.TypeHandlers.MarshalNgx(v); err != nil || handlered {
+	if items, handlered, err := options.TypeHandlers.MarshalNgx(v); err != nil || handlered {
 		return items, err
 	}
 
 	items := config.Directives{}
 	if valueType.String() == "time.Time" {
 		t := value.Interface().(time.Time)
-		return config.Directives{config.New("key", strconv.Quote(t.Format(opt.DateFormat)))}, nil
+		value := strconv.Quote(t.Format(options.DateFormat))
+		return conf(config.New("key", value)), nil
 	}
 
 	switch valueType.Kind() {
 	case reflect.String:
-		return config.Directives{config.New("key", strconv.Quote(value.String()))}, nil
+		return conf(config.New("key", value.String())), nil
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return config.Directives{config.New("key", fmt.Sprintf("%d", value.Int()))}, nil
+		return conf(config.New("key", fmt.Sprintf("%d", value.Int()))), nil
 	case reflect.Float32, reflect.Float64:
-		return config.Directives{config.New("key", fmt.Sprintf("%f", value.Float()))}, nil
+		return conf(config.New("key", fmt.Sprintf("%f", value.Float()))), nil
 	case reflect.Bool:
-		return config.Directives{config.New("key", strconv.FormatBool(value.Bool()))}, nil
+		return conf(config.New("key", strconv.FormatBool(value.Bool()))), nil
 
 	case reflect.Map:
 		for mr := value.MapRange(); mr.Next(); {
 			item := config.New(mr.Key().String())
 			if isBase(valueType.Elem()) {
-				item.AddArgs(strconv.Quote(mr.Value().String()))
+				item.AddArgs(mr.Value().String())
 			} else {
-				if d, err := MarshalOptions(mr.Value().Interface(), opt); err != nil {
+				if d, err := MarshalOptions(mr.Value().Interface(), options); err != nil {
 					return nil, err
 				} else {
-					item.AddBodyDirective(d...)
+					item.AddBodyDirective(d.Body...)
 				}
 			}
 			items = append(items, item)
@@ -84,10 +91,10 @@ func MarshalOptions(v interface{}, opt Options) (config.Directives, error) {
 			ary := config.New("array")
 			for i := 0; i < value.Len(); i++ {
 				val := value.Index(i).Interface()
-				if vItem, err := MarshalOptions(val, opt); err != nil {
+				if vItem, err := MarshalOptions(val, options); err != nil {
 					return nil, err
 				} else {
-					for _, item := range vItem {
+					for _, item := range vItem.Body {
 						ary.AddArgs(item.Args...)
 					}
 				}
@@ -97,10 +104,10 @@ func MarshalOptions(v interface{}, opt Options) (config.Directives, error) {
 			for i := 0; i < value.Len(); i++ {
 				ary := config.New("array")
 				val := value.Index(i).Interface()
-				if vItem, err := MarshalOptions(val, opt); err != nil {
+				if vItem, err := MarshalOptions(val, options); err != nil {
 					return nil, err
 				} else {
-					ary.AddBodyDirective(vItem...)
+					ary.AddBodyDirective(vItem.Body...)
 				}
 				items = append(items, ary)
 			}
@@ -129,20 +136,20 @@ func MarshalOptions(v interface{}, opt Options) (config.Directives, error) {
 				val := fieldValue.Interface().(time.Time).Format(format)
 				items = append(items, config.New(fieldName, val))
 			} else {
-				if confItems, err := MarshalOptions(fieldValue.Interface(), opt); err != nil {
+				if confItems, err := MarshalOptions(fieldValue.Interface(), options); err != nil {
 					return nil, err
 				} else {
 					if isBase(field.Type) || field.Type.Kind() == reflect.Slice {
-						for _, item := range confItems {
+						for _, item := range confItems.Body {
 							item.Name = fieldName
 							items = append(items, item)
 						}
 					} else {
-						items = append(items, config.Body(fieldName, confItems...))
+						items = append(items, config.Body(fieldName, confItems.Body...))
 					}
 				}
 			}
 		}
 	}
-	return items, nil
+	return conf(items...), nil
 }
