@@ -1,7 +1,7 @@
 package encoding
 
 import (
-	"github.com/ihaiker/ngx/config"
+	"github.com/ihaiker/ngx/v2/config"
 	"reflect"
 	"time"
 )
@@ -17,15 +17,6 @@ type (
 		TypeHandlers typeManager
 	}
 )
-
-func encodingOptions() *config.Options {
-	return &config.Options{
-		Delimiter:     true,
-		RemoveQuote:   true,
-		RemoveCommits: true,
-		MergeInclude:  true,
-	}
-}
 
 func (h typeManager) UnmarshalNgx(fieldType reflect.Type, item *config.Configuration) (value reflect.Value, handlered bool, err error) {
 	if handler, has := h[fieldType]; has {

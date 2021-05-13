@@ -1,10 +1,10 @@
 package ngx
 
 import (
-	"github.com/ihaiker/ngx/config"
-	"github.com/ihaiker/ngx/encoding"
-	"github.com/ihaiker/ngx/include"
-	"github.com/ihaiker/ngx/query"
+	"github.com/ihaiker/ngx/v2/config"
+	"github.com/ihaiker/ngx/v2/encoding"
+	"github.com/ihaiker/ngx/v2/include"
+	"github.com/ihaiker/ngx/v2/query"
 )
 
 var (
@@ -16,10 +16,13 @@ var (
 	Selects = query.Selects
 	Walk    = include.Walk
 
-	Marshal = encoding.Marshal
+	Marshal            = encoding.Marshal
+	MarshalWithOptions = encoding.MarshalWithOptions
+	MarshalOptions     = encoding.MarshalOptions
 
-	Unmarshal   = encoding.Unmarshal
-	MarshalWith = encoding.UnmarshalDirectives
+	Unmarshal            = encoding.Unmarshal
+	UnmarshalWithOptions = encoding.UnmarshalWithOptions
+	UnmarshalDirectives  = encoding.UnmarshalDirectives
 )
 
 type Options = config.Options

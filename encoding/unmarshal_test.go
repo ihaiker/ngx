@@ -1,7 +1,7 @@
 package encoding
 
 import (
-	"github.com/ihaiker/ngx/config"
+	"github.com/ihaiker/ngx/v2/config"
 	"github.com/stretchr/testify/suite"
 	"strings"
 	"testing"

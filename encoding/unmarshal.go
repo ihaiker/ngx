@@ -2,7 +2,7 @@ package encoding
 
 import (
 	"fmt"
-	"github.com/ihaiker/ngx/config"
+	"github.com/ihaiker/ngx/v2/config"
 	"os"
 	"reflect"
 	"strconv"
@@ -25,7 +25,7 @@ func UnmarshalWithOptions(data []byte, v interface{}, options Options) error {
 		return fmt.Errorf("%s not be a interface", reflect.TypeOf(v))
 	}
 
-	if conf, err := config.ParseWith(data, encodingOptions()); err != nil {
+	if conf, err := config.ParseWith(data, config.Encoding()); err != nil {
 		return err
 	} else {
 		return UnmarshalDirectives(v, conf, options)

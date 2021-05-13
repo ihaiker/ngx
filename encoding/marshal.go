@@ -2,7 +2,7 @@ package encoding
 
 import (
 	"fmt"
-	"github.com/ihaiker/ngx/config"
+	"github.com/ihaiker/ngx/v2/config"
 	"reflect"
 	"strconv"
 	"time"
@@ -26,12 +26,12 @@ func MarshalWithOptions(v interface{}, options Options) ([]byte, error) {
 
 func conf(items ...*config.Directive) *config.Configuration {
 	return &config.Configuration{
-		Source: "code", Options: encodingOptions(), Body: items,
+		Source: "code", Options: config.Encoding(), Body: items,
 	}
 }
 func directive2Conf(item *config.Directive) *config.Configuration {
 	return &config.Configuration{
-		Source: "code", Options: encodingOptions(), Body: item.Body,
+		Source: "code", Options: config.Encoding(), Body: item.Body,
 	}
 }
 

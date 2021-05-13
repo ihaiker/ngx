@@ -1,4 +1,4 @@
-module github.com/ihaiker/ngx
+module github.com/ihaiker/ngx/v2
 
 go 1.14
 

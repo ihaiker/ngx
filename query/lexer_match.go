@@ -1,7 +1,7 @@
 package query
 
 import (
-	"github.com/ihaiker/ngx/config"
+	"github.com/ihaiker/ngx/v2/config"
 	"strings"
 )
 

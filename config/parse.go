@@ -82,7 +82,6 @@ func parse(bs []byte, cfg *Configuration) (err error) {
 			Delimiter:     true,
 			RemoveQuote:   false,
 			RemoveCommits: false,
-			MergeInclude:  false,
 		}
 	}
 	it := newTokenIteratorWithBytes(bs, cfg.Options)
