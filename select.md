@@ -1,4 +1,15 @@
 
+# 语法介绍
+
+[!^$@]Ident[(arg1[\&\&|\|\|()])]+
+
+[!^$@]Ident[(\.arg)]+
+
+1、http、!http、^http、$http、@http、'@http',"!http"
+2、http(name), http(name1 || name2)、http(name1 && name2)
+
+ngx http server.server_name(baidu.com) 
+
 ####  定位参数详解
 
 看完上面几个简单的示例，您一定对定位参数`q`有些疑惑，他到底值如何工作的。此小结我们将来介绍一下他的工作原理。

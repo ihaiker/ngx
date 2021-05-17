@@ -3,18 +3,16 @@ package ngx
 import (
 	"github.com/ihaiker/ngx/v2/config"
 	"github.com/ihaiker/ngx/v2/encoding"
-	"github.com/ihaiker/ngx/v2/include"
-	"github.com/ihaiker/ngx/v2/query"
 )
 
 var (
 	MustParse     = config.MustParse
+	MustParseIO   = config.MustParseIO
 	MustParseWith = config.MustParseWith
-	Parse         = config.Parse
-	ParseWith     = config.ParseWith
 
-	Selects = query.Selects
-	Walk    = include.Walk
+	Parse     = config.Parse
+	ParseIO   = config.ParseIO
+	ParseWith = config.ParseWith
 
 	Marshal            = encoding.Marshal
 	MarshalWithOptions = encoding.MarshalWithOptions

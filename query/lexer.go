@@ -1,59 +1,44 @@
 package query
 
 import (
-	"github.com/alecthomas/participle"
+	"github.com/alecthomas/participle/v2"
+	"github.com/alecthomas/participle/v2/lexer/stateful"
 )
 
-type QueryArg struct {
-	Comparison string `[@("!" | "@" | "^" | "$")]`
-	Value      string `@(String|RawString|Ident|"_"|"*")`
-}
-
-type QueryArgAddition struct {
-	Operator string    `@("&" | "|")`
-	Arg      *QueryArg `@@`
-}
-
-type QueryArgs struct {
-	Arg  *QueryArg           `@@`
-	Next []*QueryArgAddition `{ @@ }`
-}
-
-type QueryDirective struct {
-	Comparison string `( ( [@("!" | "@" | "^" | "$")]`
-	Name       string `@Ident )` //指令名称
-
-	All string ` | @"*" )`
-
-	Args *QueryArgs `["(" [@@] ")"]`
-}
-
-type QueryChildren struct {
-	//server.[server_name('_') & listen('8081' | '8080')]
-	//后置指令一个，
-	Directive *QueryDirective `( @@`
-	//后置指令多个
-	Group *QueryChildArray `| "[" @@ "]" )`
-}
-
-type QueryChildArray struct {
-	First *QueryDirective          `@@`
-	Next  []*QueryChildrenAddition `@@`
-}
-
-type QueryChildrenAddition struct {
-	Operator string          `@("&" | "|")`
-	Next     *QueryDirective `@@`
-}
-
 type Expression struct {
-	Directive *QueryDirective  `@@`        //前置指令 例如：http
-	Children  []*QueryChildren `("." @@)*` //后置指令 例如 server.server_name 中的 .server_name
+	Directive []Directive `("."@@)+`
+}
+
+type Directive struct {
+	Name  string `(@Ident|("[" @String "]"))`
+	Index *Index `["["@@"]"]`
+}
+
+type Index struct {
+	Start *int `[@Number]`
+	End   *int `[":"][@Number]`
 }
 
 func Lexer(str string) (expr *Expression, err error) {
+	var def *stateful.Definition
+	def, err = stateful.NewSimple([]stateful.Rule{
+		{"String", `("(\\"|[^"])*")|('(\\'|[^'])*')`, nil},
+		{"Number", `[-]?(\d*\.)?\d+`, nil},
+		{"Ident", `[a-zA-Z_]\w*`, nil},
+		{"Whitespace", `\s+`, nil},
+		{"Punct", `[-[!@#$%^&*()+_={}\|:;"'<,>.?/]|]`, nil},
+	})
+	options := []participle.Option{
+		participle.Lexer(def),
+		participle.Unquote("String"),
+		participle.UseLookahead(2),
+	}
 	expr = &Expression{}
-	parser := participle.MustBuild(expr)
-	err = parser.ParseString(str, expr)
+	var parser *participle.Parser
+	if parser, err = participle.Build(expr, options...); err != nil {
+		return
+	}
+	//fmt.Println(parser.String())
+	err = parser.ParseString(str, str, expr)
 	return
 }
