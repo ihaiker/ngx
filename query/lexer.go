@@ -1,22 +1,17 @@
 package query
 
 import (
+	"fmt"
 	"github.com/alecthomas/participle/v2"
+	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/alecthomas/participle/v2/lexer/stateful"
+	"strings"
 )
 
 type Expression struct {
-	Directive []Directive `("."@@)+`
-}
-
-type Directive struct {
-	Name  string `(@Ident|("[" @String "]"))`
-	Index *Index `["["@@"]"]`
-}
-
-type Index struct {
-	Start *int `[@Number]`
-	End   *int `[":"][@Number]`
+	Pos       lexer.Position
+	Directive []Directive `[@@+`
+	Function  *Function   `|@@]`
 }
 
 func Lexer(str string) (expr *Expression, err error) {
@@ -38,7 +33,11 @@ func Lexer(str string) (expr *Expression, err error) {
 	if parser, err = participle.Build(expr, options...); err != nil {
 		return
 	}
-	//fmt.Println(parser.String())
-	err = parser.ParseString(str, str, expr)
+	if err = parser.ParseString(str, str, expr); err != nil {
+		if utp, match := err.(participle.UnexpectedTokenError); match {
+			err = fmt.Errorf("Expected: [%s]\n%s\n%s^\n", utp.Expected,
+				str, strings.Repeat(" ", utp.Position().Offset))
+		}
+	}
 	return
 }

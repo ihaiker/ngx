@@ -1,6 +1,7 @@
 package query
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/suite"
 	"strings"
 	"testing"
@@ -11,6 +12,7 @@ type TestLexerSuite struct {
 }
 
 func (p TestLexerSuite) lexer(str string) *Expression {
+	p.T().Log("test:", str)
 	expr, err := Lexer(str)
 	p.Require().Nil(err)
 	return expr
@@ -18,7 +20,6 @@ func (p TestLexerSuite) lexer(str string) *Expression {
 
 func (p *TestLexerSuite) TestBase() {
 	base := func(nql string) {
-		p.T().Log("test:", nql)
 		expr := p.lexer(nql)
 		items := strings.Split(nql[1:], ".")
 		for i, item := range items {
@@ -40,7 +41,6 @@ func (p *TestLexerSuite) TestBase() {
 
 func (p TestLexerSuite) TestBaseIndex() {
 	base := func(nql string) {
-		p.T().Log("test:", nql)
 		expr := p.lexer(nql)
 		items := strings.Split(nql[1:], ".")
 		for i, item := range items {
@@ -69,6 +69,59 @@ func (p TestLexerSuite) TestBaseIndex() {
 	p.Equal(1, *expr.Directive[1].Index.Start)
 	p.Equal(2, *expr.Directive[3].Index.Start)
 	p.Equal(3, *expr.Directive[3].Index.End)
+}
+
+func (p TestLexerSuite) TestArgs() {
+	expr := p.lexer(".http('name')")
+	p.Equal("name", *expr.Directive[0].Args.Left.Value)
+
+	expr = p.lexer(".http.server.server_name('api.aginx.io')")
+	p.Equal("api.aginx.io", *expr.Directive[2].Args.Left.Value)
+
+	for _, opt := range []string{"", "!", "@", "^", "$", "&"} {
+		expr = p.lexer(fmt.Sprintf(".server_name(%s'api.aginx.io')", opt))
+		p.Equal(opt, expr.Directive[0].Args.Left.Comparison)
+	}
+
+	expr = p.lexer(".http.server[1].server_name('api.aginx.io')")
+	p.Equal("api.aginx.io", *expr.Directive[2].Args.Left.Value)
+	p.Equal(1, *expr.Directive[1].Index.Start)
+
+	expr = p.lexer(".http.server[1].server_name('ssl' && 'http')")
+	p.Equal("ssl", *expr.Directive[2].Args.Left.Value)
+	p.Equal("&&", expr.Directive[2].Args.Operator)
+	p.Equal("http", *expr.Directive[2].Args.Right.Value)
+
+	expr = p.lexer(".http.server[1].server_name('ssl' && (('api.aginx.io' || 'test') || 'v2.aginx.io'))")
+	p.Equal(1, *expr.Directive[1].Index.Start)
+	p.Equal("ssl", *expr.Directive[2].Args.Left.Value)
+	p.Equal("&&", expr.Directive[2].Args.Operator)
+	p.Equal("api.aginx.io", *expr.Directive[2].Args.Right.Group.Left.Group.Left.Value)
+	p.Equal("||", expr.Directive[2].Args.Right.Group.Operator)
+	p.Equal("v2.aginx.io", *expr.Directive[2].Args.Right.Group.Right.Value)
+
+	expr = p.lexer(`.server_name(('api.aginx.io' || 'v2.aginx.io') && 'ssl')`)
+	p.Equal("api.aginx.io", *expr.Directive[0].Args.Left.Group.Left.Value)
+	p.Equal("v2.aginx.io", *expr.Directive[0].Args.Left.Group.Right.Value)
+	p.Equal("ssl", *expr.Directive[0].Args.Right.Value)
+}
+
+func (p TestLexerSuite) TestFunction() {
+	expr := p.lexer("args('name', .http)")
+	p.Equal("args", expr.Function.Name)
+	p.Equal("name", *expr.Function.Args[0].Value)
+	p.Equal("http", expr.Function.Args[1].Directive.Name)
+
+	expr = p.lexer("arg( 1, 'name', 'SELECT' )")
+	p.Equal("arg", expr.Function.Name)
+	p.Equal(1, *expr.Function.Args[0].Index)
+	p.Equal("name", *expr.Function.Args[1].Value)
+
+	expr = p.lexer("arg1( arg2( arg3( 'name' ) ) , 'http' )")
+	p.Equal("arg1", expr.Function.Name)
+	p.Equal("arg2", expr.Function.Args[0].Function.Name)
+	p.Equal("http", *expr.Function.Args[1].Value)
+	p.Equal("name", *expr.Function.Args[0].Function.Args[0].Function.Args[0].Value)
 }
 
 func TestLexer(t *testing.T) {
