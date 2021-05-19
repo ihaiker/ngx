@@ -26,7 +26,7 @@ func newCharIteratorWithBytes(bs []byte) *charIterator {
 	return &charIterator{scanner: s, currentLine: 1}
 }
 
-func (self *charIterator) nextFilter(filter Filter) (word string, line int, has bool) {
+func (self *charIterator) nextFilter(filter filter) (word string, line int, has bool) {
 	previous := ""
 	for {
 		if word, line, has = self.next(); !has {
@@ -40,7 +40,7 @@ func (self *charIterator) nextFilter(filter Filter) (word string, line int, has 
 }
 
 //不包括最后一个
-func (self *charIterator) nextTo(filter Filter, includeLast bool) (word string, line int, has bool) {
+func (self *charIterator) nextTo(filter filter, includeLast bool) (word string, line int, has bool) {
 	lastChar := ""
 	for {
 		if lastChar, line, has = self.next(); !has {

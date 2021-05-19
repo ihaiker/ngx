@@ -26,15 +26,23 @@ func MarshalWithOptions(v interface{}, options Options) ([]byte, error) {
 
 func conf(items ...*config.Directive) *config.Configuration {
 	return &config.Configuration{
-		Source: "code", Options: config.Encoding(), Body: items,
+		Source: "code", Body: items,
 	}
 }
 func directive2Conf(item *config.Directive) *config.Configuration {
 	return &config.Configuration{
-		Source: "code", Options: config.Encoding(), Body: item.Body,
+		Source: "code", Body: item.Body,
 	}
 }
-
+func data_format(format string, options Options) string {
+	if format == "" {
+		format = options.DateFormat
+	}
+	if format == "" {
+		format = time.RFC3339
+	}
+	return format
+}
 func MarshalOptions(v interface{}, options Options) (*config.Configuration, error) {
 	if v == nil {
 		return nil, nil
@@ -57,7 +65,7 @@ func MarshalOptions(v interface{}, options Options) (*config.Configuration, erro
 	items := config.Directives{}
 	if valueType.String() == "time.Time" {
 		t := value.Interface().(time.Time)
-		value := strconv.Quote(t.Format(options.DateFormat))
+		value := strconv.Quote(t.Format(data_format("", options)))
 		return conf(config.New("key", value)), nil
 	}
 
@@ -131,7 +139,7 @@ func MarshalOptions(v interface{}, options Options) (*config.Configuration, erro
 			if fieldName == "" {
 				fieldName = field.Name
 			}
-
+			format = data_format(format, options)
 			if fieldValue.Kind().String() == "time.Time" {
 				val := fieldValue.Interface().(time.Time).Format(format)
 				items = append(items, config.New(fieldName, val))

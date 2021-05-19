@@ -16,7 +16,7 @@ http  {
     include mime.types;
     default_type application/octet-stream;
 }
-`), &Options{})
+`))
 }
 
 func (p *tokenIteratorSite) assertIt(aToken string, aLine int, aHas bool) {

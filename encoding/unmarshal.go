@@ -25,7 +25,7 @@ func UnmarshalWithOptions(data []byte, v interface{}, options Options) error {
 		return fmt.Errorf("%s not be a interface", reflect.TypeOf(v))
 	}
 
-	if conf, err := config.ParseWith(data, config.Encoding()); err != nil {
+	if conf, err := config.ParseBytes(data); err != nil {
 		return err
 	} else {
 		return UnmarshalDirectives(v, conf, options)

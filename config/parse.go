@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 )
 
-func subDirectives(it *tokenIterator, opt *Options) ([]*Directive, error) {
+func subDirectives(it *tokenIterator) ([]*Directive, error) {
 	directives := make([]*Directive, 0)
 	for {
 		token, line, has := it.next()
@@ -17,17 +18,14 @@ func subDirectives(it *tokenIterator, opt *Options) ([]*Directive, error) {
 		if token == ";" || token == "}" {
 			break
 		} else if token[0] == '#' { //注释
-			if !opt.RemoveCommits {
-				directives = append(directives, &Directive{
-					Line: line, Name: "#", Args: []string{strings.Trim(token[1:], " ")},
-				})
-			}
+			directives = append(directives, &Directive{
+				Line: line, Name: "#", Args: []string{strings.Trim(token[1:], " ")},
+			})
 		} else {
-
-			if opt.Delimiter {
-				if strings.HasSuffix(token, ":") {
-					token = token[0 : len(token)-1]
-				}
+			//@Unsupported， 放弃配置文件制定是否需要添加分隔符。
+			//改为默认支持，向下兼容
+			if strings.HasSuffix(token, ":") {
+				token = token[0 : len(token)-1]
 			}
 
 			if args, lastToken, err := it.expectNext(In(";", "{")); err != nil {
@@ -40,7 +38,7 @@ func subDirectives(it *tokenIterator, opt *Options) ([]*Directive, error) {
 				directive := &Directive{
 					Line: line, Name: token, Args: args,
 				}
-				if subDirs, err := subDirectives(it, opt); err != nil {
+				if subDirs, err := subDirectives(it); err != nil {
 					return nil, err
 				} else {
 					directive.Body = subDirs
@@ -52,24 +50,24 @@ func subDirectives(it *tokenIterator, opt *Options) ([]*Directive, error) {
 	return directives, nil
 }
 
-func MustParse(filename string, opt *Options) *Configuration {
-	cfg, err := Parse(filename, opt)
+func MustParse(filename string) *Configuration {
+	cfg, err := Parse(filename)
 	if err != nil {
 		panic(err)
 	}
 	return cfg
 }
 
-func MustParseWith(bs []byte, opt *Options) *Configuration {
-	cfg, err := ParseWith(bs, opt)
+func MustParseBytes(bs []byte) *Configuration {
+	cfg, err := ParseBytes(bs)
 	if err != nil {
 		panic(err)
 	}
 	return cfg
 }
 
-func MustParseIO(reader io.Reader, options *Options) *Configuration {
-	cfg, err := ParseIO(reader, options)
+func MustParseIO(reader io.Reader) *Configuration {
+	cfg, err := ParseIO(reader)
 	if err != nil {
 		panic(err)
 	}
@@ -77,21 +75,19 @@ func MustParseIO(reader io.Reader, options *Options) *Configuration {
 }
 
 func parse(bs []byte, cfg *Configuration) (err error) {
-	if cfg.Options == nil {
-		cfg.Options = &Options{
-			Delimiter:     true,
-			RemoveQuote:   false,
-			RemoveCommits: false,
-		}
-	}
-	it := newTokenIteratorWithBytes(bs, cfg.Options)
-	cfg.Body, err = subDirectives(it, cfg.Options)
+	it := newTokenIteratorWithBytes(bs)
+	cfg.Body, err = subDirectives(it)
 	return
 }
 
-func Parse(filename string, options *Options) (cfg *Configuration, err error) {
+func Parse(filename string) (cfg *Configuration, err error) {
 	cfg = &Configuration{Source: fmt.Sprintf("file://%s", filename)}
-	cfg.Options = options
+
+	if _, err = os.Stat(filename); !(err == nil || os.IsExist(err)) {
+		err = fmt.Errorf("file not found: %s", filename)
+		return
+	}
+
 	var bs []byte
 	if bs, err = ioutil.ReadFile(filename); err != nil {
 		return
@@ -100,18 +96,18 @@ func Parse(filename string, options *Options) (cfg *Configuration, err error) {
 	return
 }
 
-func ParseIO(reader io.Reader, options *Options) (cfg *Configuration, err error) {
+func ParseIO(reader io.Reader) (cfg *Configuration, err error) {
 	var bs []byte
 	if bs, err = ioutil.ReadAll(reader); err != nil {
 		return
 	}
-	cfg = &Configuration{Source: "io", Options: options}
+	cfg = &Configuration{Source: "io"}
 	err = parse(bs, cfg)
 	return
 }
 
-func ParseWith(bs []byte, options *Options) (cfg *Configuration, err error) {
-	cfg = &Configuration{Source: "bytes", Options: options}
+func ParseBytes(bs []byte) (cfg *Configuration, err error) {
+	cfg = &Configuration{Source: "bytes"}
 	err = parse(bs, cfg)
 	return
 }

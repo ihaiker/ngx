@@ -8,11 +8,11 @@ import (
 var (
 	MustParse     = config.MustParse
 	MustParseIO   = config.MustParseIO
-	MustParseWith = config.MustParseWith
+	MustParseWith = config.MustParseBytes
 
 	Parse     = config.Parse
 	ParseIO   = config.ParseIO
-	ParseWith = config.ParseWith
+	ParseWith = config.ParseBytes
 
 	Marshal            = encoding.Marshal
 	MarshalWithOptions = encoding.MarshalWithOptions
@@ -23,7 +23,6 @@ var (
 	UnmarshalDirectives  = encoding.UnmarshalDirectives
 )
 
-type Options = config.Options
 type Configuration = config.Configuration
 type Directive = config.Directive
 type Directives = config.Directives

@@ -27,7 +27,7 @@ func (p *TestMarshalSuite) TestBase() {
 	out := p.Marshal(&Test{
 		Name: "name",
 	})
-	p.Equal(`name: name;`, out)
+	p.Equal(`name name;`, out)
 }
 
 func TestMarshal(t *testing.T) {

@@ -6,22 +6,21 @@ import (
 )
 
 type tokenIterator struct {
-	it  *charIterator
-	opt *Options
+	it *charIterator
 }
 
-func newTokenIterator(filename string, opt *Options) (*tokenIterator, error) {
+func newTokenIterator(filename string) (*tokenIterator, error) {
 	chatIt, err := newCharIterator(filename)
 	if err != nil {
 		return nil, err
 	}
-	tokenIt := &tokenIterator{it: chatIt, opt: opt}
+	tokenIt := &tokenIterator{it: chatIt}
 	return tokenIt, nil
 }
 
-func newTokenIteratorWithBytes(bs []byte, opt *Options) *tokenIterator {
+func newTokenIteratorWithBytes(bs []byte) *tokenIterator {
 	chatIt := newCharIteratorWithBytes(bs)
-	tokenIt := &tokenIterator{it: chatIt, opt: opt}
+	tokenIt := &tokenIterator{it: chatIt}
 	return tokenIt
 }
 
@@ -53,11 +52,7 @@ func (self *tokenIterator) next() (token string, tokenLine int, tokenHas bool) {
 				if !wordHas {
 					panic(fmt.Errorf("error at line : %d", line))
 				}
-				if self.opt.RemoveQuote {
-					token = word[0 : len(word)-1] //去除文本括号
-				} else {
-					token = char + word
-				}
+				token = word[:len(word)-1] //remove quota
 				tokenLine = line
 				tokenHas = true
 				return
@@ -75,7 +70,7 @@ func (self *tokenIterator) next() (token string, tokenLine int, tokenHas bool) {
 	}
 }
 
-func (self *tokenIterator) expectNext(filter Filter) (tokens []string, lastToken string, err error) {
+func (self *tokenIterator) expectNext(filter filter) (tokens []string, lastToken string, err error) {
 	tokens = make([]string, 0)
 	for {
 		if token, _, has := self.next(); has {

@@ -2,10 +2,9 @@ package query
 
 import (
 	"github.com/alecthomas/participle/v2/lexer"
-	"github.com/ihaiker/ngx/v2/config"
 )
 
-// args(''`)
+// args('')
 type Function struct {
 	Pos  lexer.Position
 	Name string     `@Ident`
@@ -17,8 +16,6 @@ type FuncArg struct {
 	Directive *Directive `(@@`
 	Index     *int       `|@Number`
 	Value     *string    `|@String`
-	Function  *Function  `|@@)`
+	Function  *Function  `|@@`
+	Arrays    []FuncArg  `|("[" @@ (","@@)* "]") )`
 }
-
-//方法执行
-type ExecFunction func(items config.Directives, args ...FuncArg) config.Directives

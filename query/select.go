@@ -5,10 +5,20 @@ import (
 )
 
 //Selects 查询配置内容。
-func Selects(conf *config.Configuration, queries ...string) ([]*config.Directive, error) {
-	current := []*config.Directive{{
-		Line: 1, Name: conf.Source,
-		Body: conf.Body,
-	}}
-	return current, nil
+func Selects(conf *config.Configuration, queries ...string) (items []*config.Directive, err error) {
+	items = conf.Body
+	var expr *Expression
+
+	for _, query := range queries {
+		if expr, err = Lexer(query); err != nil {
+			return
+		}
+		if items, err = expr.Select(items); err != nil {
+			return
+		}
+		if len(items) == 0 {
+			return
+		}
+	}
+	return
 }

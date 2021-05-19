@@ -19,9 +19,8 @@ type (
 	}
 	Directives    []*Directive
 	Configuration struct {
-		Source  string
-		Options *Options
-		Body    Directives
+		Source string     `json:"source"`
+		Body   Directives `json:"body"`
 	}
 )
 
@@ -35,9 +34,8 @@ func Body(name string, body ...*Directive) *Directive {
 }
 func Config(body ...*Directive) *Configuration {
 	return &Configuration{
-		Source:  "",
-		Options: Default(),
-		Body:    body,
+		Source: "",
+		Body:   body,
 	}
 }
 
@@ -76,34 +74,40 @@ func (d *Directive) AddBodyDirective(directives ...*Directive) {
 	d.Body = append(d.Body, directives...)
 }
 
-func (d *Directive) PrettyOptions(prefix int, options Options) string {
+func (d *Directive) Pretty(prefix int) string {
 	prefixString := strings.Repeat(" ", prefix*4)
 	if d.Name == "#" {
-		if options.RemoveCommits {
-			return ""
-		}
 		return fmt.Sprintf("%s# %s", prefixString, d.Args[0])
 	} else if d.Virtual != "" {
 		return ""
 	} else {
+
 		out := bytes.NewBufferString(prefixString)
 		out.WriteString(d.Name)
+		splitLine := (len(d.Name) + len(strings.Join(d.Args, " "))) > 80
 
 		for i, arg := range d.Args {
-			if i == 0 {
-				if options.Delimiter {
-					out.WriteString(":")
-				}
-			}
-
 			out.WriteByte(' ')
-
-			if options.RemoveQuote && strings.ContainsAny(arg, "\"'` \t\n") {
-				out.WriteString(strconv.Quote(arg))
-				continue
+			if i != 0 && splitLine {
+				out.WriteRune('\n')
+				out.WriteString(strings.Repeat(" ", len(d.Name)+prefix*4))
 			}
 
-			out.WriteString(arg)
+			if strings.ContainsAny(arg, "\r\n") {
+				out.WriteRune('`')
+				out.WriteString(arg)
+				out.WriteRune('`')
+			} else if strings.ContainsRune(arg, '"') {
+				out.WriteRune('\'')
+				out.WriteString(arg)
+				out.WriteRune('\'')
+			} else if strings.ContainsRune(arg, '\'') {
+				out.WriteString(strconv.Quote(arg))
+			} else if strings.ContainsAny(arg, "\t ") {
+				out.WriteString(strconv.Quote(arg))
+			} else {
+				out.WriteString(arg)
+			}
 		}
 
 		if d.noBody() {
@@ -112,16 +116,12 @@ func (d *Directive) PrettyOptions(prefix int, options Options) string {
 			out.WriteString(" {")
 			for _, body := range d.Body {
 				out.WriteString("\n")
-				out.WriteString(body.PrettyOptions(prefix+1, options))
+				out.WriteString(body.Pretty(prefix + 1))
 			}
 			out.WriteString(fmt.Sprintf("\n%s}", prefixString))
 		}
 		return out.String()
 	}
-}
-
-func (d *Directive) Pretty(prefix int) string {
-	return d.PrettyOptions(prefix, *def)
 }
 
 func (cfg *Configuration) Pretty() string {
@@ -130,7 +130,7 @@ func (cfg *Configuration) Pretty() string {
 		if i != 0 {
 			out.WriteByte('\n')
 		}
-		itemString := item.PrettyOptions(0, *cfg.Options)
+		itemString := item.Pretty(0)
 		_, _ = out.WriteString(itemString)
 	}
 	return out.String()

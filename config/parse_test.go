@@ -34,7 +34,7 @@ type parseSuite struct {
 }
 
 func (p *parseSuite) TestParse() {
-	config, err := ParseWith([]byte(nginxConfig), &Options{Delimiter: true, RemoveQuote: true})
+	config, err := ParseBytes([]byte(nginxConfig))
 	p.Nil(err)
 	p.Len(config.Body, 5)
 	p.Equal(config.Body[0].Name, "#")
@@ -53,6 +53,12 @@ func (p *parseSuite) TestParse() {
 	p.Equal(events.Body[0].Args[0], "1024")
 
 	p.T().Log(config.Pretty())
+}
+
+func (p parseSuite) TestNginxConfig() {
+	conf, err := Parse("../query/_testdata/nginx.conf")
+	p.Nil(err)
+	p.T().Log(conf.Pretty())
 }
 
 func TestParse(t *testing.T) {

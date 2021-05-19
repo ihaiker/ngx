@@ -2,9 +2,9 @@ package config
 
 import "regexp"
 
-type Filter func(current, previous string) bool
+type filter func(current, previous string) bool
 
-func (self Filter) And(cf ...Filter) Filter {
+func (self filter) And(cf ...filter) filter {
 	return func(current, previous string) bool {
 		if !self(current, previous) {
 			return false
@@ -18,7 +18,7 @@ func (self Filter) And(cf ...Filter) Filter {
 	}
 }
 
-func (self Filter) Or(cf ...Filter) Filter {
+func (self filter) Or(cf ...filter) filter {
 	return func(current, previous string) bool {
 		out := self(current, previous)
 		for _, filter := range cf {
@@ -30,11 +30,11 @@ func (self Filter) Or(cf ...Filter) Filter {
 
 var (
 	vailCharRegexp        = regexp.MustCompile("\\S")
-	ValidChars     Filter = func(current, previous string) bool {
+	ValidChars     filter = func(current, previous string) bool {
 		return vailCharRegexp.MatchString(current)
 	}
 
-	In = func(chars ...string) Filter {
+	In = func(chars ...string) filter {
 		return func(current, previous string) bool {
 			for _, char := range chars {
 				if char == current {
@@ -45,7 +45,7 @@ var (
 		}
 	}
 
-	Not = func(cf Filter) Filter {
+	Not = func(cf filter) filter {
 		return func(current, previous string) bool {
 			return !cf(current, previous)
 		}
