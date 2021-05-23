@@ -154,3 +154,23 @@ func (this *Arg) match(items []string) bool {
 	}
 	return this.matchComparison(this.Comparison, items)
 }
+
+type Directives []Directive
+
+//指令检索
+func (expr Directives) Select(items config.Directives) (matched config.Directives, err error) {
+	dir := expr[0]
+	if matched, err = dir.Select(items); err != nil {
+		return
+	}
+	if len(expr[1:]) == 0 {
+		return
+	}
+	subItems := config.Directives{}
+	for _, item := range matched {
+		if item.Body != nil {
+			subItems = append(subItems, item.Body...)
+		}
+	}
+	return expr[1:].Select(subItems)
+}

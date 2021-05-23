@@ -82,6 +82,11 @@ func (p TestSelectSuite) TestArgs() {
 	p.Equal([]string{"200", "ok"}, items[0].Args)
 }
 
+func (p TestSelectSuite) TestFN() {
+	items := p.sel(".http.server", "select(.server,'equal','aginx.x.do')")
+	p.Len(items, 3)
+}
+
 func TestSelect(t *testing.T) {
 	suite.Run(t, new(TestSelectSuite))
 }

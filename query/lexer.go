@@ -11,40 +11,15 @@ import (
 
 type Expression struct {
 	Pos       lexer.Position
-	Directive []Directive `[@@+`
-	Function  *Function   `|@@]`
+	Directive Directives `[@@+`
+	Function  *Function  `|@@]`
 }
 
-func (expr *Expression) Select(items config.Directives) (config.Directives, error) {
+func (expr *Expression) Select(items config.Directives, fns map[string]ExecutorFunction) (config.Directives, error) {
 	if expr.Directive != nil || len(expr.Directive) != 0 {
-		return expr.directive(items)
+		return expr.Directive.Select(items)
 	}
-	return expr.function(items)
-}
-
-//指令检索
-func (expr *Expression) directive(items config.Directives) (matched config.Directives, err error) {
-	dir := expr.Directive[0]
-	if matched, err = dir.Select(items); err != nil {
-		return
-	}
-
-	if len(expr.Directive[1:]) == 0 {
-		return
-	}
-	expr.Directive = expr.Directive[1:]
-
-	subItems := config.Directives{}
-	for _, item := range matched {
-		if item.Body != nil {
-			subItems = append(subItems, item.Body...)
-		}
-	}
-	return expr.directive(subItems)
-}
-
-func (expr *Expression) function(items config.Directives) (config.Directives, error) {
-	return items, nil
+	return expr.Function.Select(items, fns)
 }
 
 func Lexer(str string) (expr *Expression, err error) {
