@@ -17,12 +17,5 @@ type FuncArg struct {
 	Index     *int         `|@Number`
 	Value     *string      `|@String`
 	Function  *Function    `|@@`
-	Arrays    []FuncArg    `|("[" [Whitespace] @@ ([Whitespace]","[Whitespace] @@)* [Whitespace] "]")`
-	Condition *Condition   `|@@)`
-}
-
-type Condition struct {
-	Name     FuncArg `@@`
-	Operator string  `Whitespace @("equal"|"startWith"|"endWith"|"contains"|"regex") Whitespace`
-	Value    FuncArg `@@`
+	Arrays    []FuncArg    `|("[" [Whitespace] @@ ([Whitespace]","[Whitespace] @@)* [Whitespace] "]") )`
 }
