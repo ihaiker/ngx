@@ -136,18 +136,30 @@ func (p TestLexerSuite) TestFunction() {
 	expr := p.lexer("args('name', .http)")
 	p.Equal("args", expr.Function.Name)
 	p.Equal("name", *expr.Function.Args[0].Value)
-	p.Equal("http", *expr.Function.Args[1].Directive.Name)
+	p.Equal("http", *expr.Function.Args[1].Directive[0].Name)
 
 	expr = p.lexer("arg( 1, 'name', 'SELECT' )")
 	p.Equal("arg", expr.Function.Name)
 	p.Equal(1, *expr.Function.Args[0].Index)
 	p.Equal("name", *expr.Function.Args[1].Value)
 
-	expr = p.lexer("arg1( arg2( arg3( 'name' ) ) , 'http' )")
+	expr = p.lexer("arg1(arg2(arg3('name')), 'http')")
 	p.Equal("arg1", expr.Function.Name)
 	p.Equal("arg2", expr.Function.Args[0].Function.Name)
 	p.Equal("http", *expr.Function.Args[1].Value)
 	p.Equal("name", *expr.Function.Args[0].Function.Args[0].Function.Args[0].Value)
+
+	expr = p.lexer("arg( ['1', 2, '3', .http], 'name', .http.server)")
+	p.Len(expr.Function.Args, 3)
+	p.Len(expr.Function.Args[0].Arrays, 4)
+	p.Equal("1", *expr.Function.Args[0].Arrays[0].Value)
+	p.Equal(2, *expr.Function.Args[0].Arrays[1].Index)
+	p.Equal("3", *expr.Function.Args[0].Arrays[2].Value)
+	p.Equal("http", *expr.Function.Args[0].Arrays[3].Directive[0].Name)
+	p.Equal("name", *expr.Function.Args[1].Value)
+	p.Len(expr.Function.Args[2].Directive, 2)
+	p.Equal("http", *expr.Function.Args[2].Directive[0].Name)
+	p.Equal("server", *expr.Function.Args[2].Directive[1].Name)
 }
 
 func TestLexer(t *testing.T) {

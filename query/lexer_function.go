@@ -13,9 +13,16 @@ type Function struct {
 
 type FuncArg struct {
 	Pos       lexer.Position
-	Directive *Directive `(@@`
-	Index     *int       `|@Number`
-	Value     *string    `|@String`
-	Function  *Function  `|@@`
-	Arrays    []FuncArg  `|("[" @@ (","@@)* "]") )`
+	Directive []*Directive `(@@+`
+	Index     *int         `|@Number`
+	Value     *string      `|@String`
+	Function  *Function    `|@@`
+	Arrays    []FuncArg    `|("[" [Whitespace] @@ ([Whitespace]","[Whitespace] @@)* [Whitespace] "]")`
+	Condition *Condition   `|@@)`
+}
+
+type Condition struct {
+	Name     FuncArg `@@`
+	Operator string  `Whitespace @("equal"|"startWith"|"endWith"|"contains"|"regex") Whitespace`
+	Value    FuncArg `@@`
 }
