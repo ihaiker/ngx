@@ -83,8 +83,8 @@ func (p TestSelectSuite) TestArgs() {
 }
 
 func (p TestSelectSuite) TestFN() {
-	items := p.sel(".http.server", "select(.server,'equal','aginx.x.do')")
-	p.Len(items, 3)
+	items := p.sel(".http.server", "select(.server_name,'equal','aginx.x.do')")
+	p.Len(items, 1)
 }
 
 func TestSelect(t *testing.T) {
