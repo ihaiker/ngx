@@ -8,36 +8,60 @@ import (
 	"strings"
 )
 
-type Directive struct {
+type directive struct {
 	Pos   lexer.Position
 	Regex *string `"."[ ("*") |  @Regex`
 	Name  *string `| (@Ident|("[" @String "]")) ]`
 	Args  *Args   `[("("@@")")]`
 	Index *Index  `["["@@"]"]`
 }
+type directives []directive
 
-func (d *Directive) match(item *config.Directive) bool {
-	if d.Name != nil && *d.Name != item.Name {
-		return false
+//指令检索
+func (expr directives) call(items config.Directives) (matched config.Directives, err error) {
+	dir := expr[0]
+	if matched, err = dir.call(items); err != nil {
+		return
 	}
-	if d.Regex != nil {
-		regex := (*d.Regex)[1 : len(*d.Regex)-1]
-		if match, _ := regexp.MatchString(regex, item.Name); !match {
-			return false
-		}
+	if len(expr[1:]) == 0 {
+		return
 	}
-	if d.Args != nil {
-		return d.Args.match(item.Args)
-	}
-	return true
+	return expr[1:].call(matched)
 }
 
-func (this *Directive) Select(items config.Directives) (matched config.Directives, err error) {
+func (this *directive) call(items config.Directives) (matched config.Directives, err error) {
 
-	for _, item := range items {
-		if this.match(item) {
-			matched = append(matched, item)
+	//匹配 "."
+	if this.Name == nil && this.Regex == nil {
+		matched = items
+	} else if this.Name != nil { //名称匹配子指令名称
+		for _, item := range items {
+			for _, body := range item.Body {
+				if body.Name == *this.Name {
+					//不检查参数匹配或者参数匹配正确
+					if this.Args == nil || this.Args.match(body.Args) {
+						matched = append(matched, body)
+					}
+				}
+			}
 		}
+	} else if this.Regex != nil { //正则匹配紫属性
+		regex := (*this.Regex)[1 : len(*this.Regex)-1]
+		for _, item := range items {
+			for _, body := range item.Body {
+				if match, _ := regexp.MatchString(regex, body.Name); match {
+					//不检查参数匹配或者参数匹配正确
+					if this.Args == nil || this.Args.match(body.Args) {
+						matched = append(matched, body)
+					}
+				}
+			}
+		}
+	}
+
+	//没有匹配到相应内容
+	if len(matched) == 0 {
+		return
 	}
 
 	if this.Index != nil {
@@ -87,7 +111,7 @@ type Index struct {
 type Args struct {
 	Pos      lexer.Position
 	Left     Arg    `@@`
-	Operator string `[(([Whitespace] @("&""&") [Whitespace]) | ([Whitespace] @("|""|") [Whitespace]))`
+	Operator string `[(@("&""&") | @("|""|"))`
 	Right    *Arg   `@@]`
 }
 
@@ -153,24 +177,4 @@ func (this *Arg) match(items []string) bool {
 		return this.Group.match(items)
 	}
 	return this.matchComparison(this.Comparison, items)
-}
-
-type Directives []Directive
-
-//指令检索
-func (expr Directives) Select(items config.Directives) (matched config.Directives, err error) {
-	dir := expr[0]
-	if matched, err = dir.Select(items); err != nil {
-		return
-	}
-	if len(expr[1:]) == 0 {
-		return
-	}
-	subItems := config.Directives{}
-	for _, item := range matched {
-		if item.Body != nil {
-			subItems = append(subItems, item.Body...)
-		}
-	}
-	return expr[1:].Select(subItems)
 }

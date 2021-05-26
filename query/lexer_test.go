@@ -11,9 +11,9 @@ type TestLexerSuite struct {
 	suite.Suite
 }
 
-func (p TestLexerSuite) lexer(str string) *Expression {
+func (p TestLexerSuite) lexer(str string) *expression {
 	p.T().Log("test:", str)
-	expr, err := Lexer(str)
+	expr, err := parseLexer(str)
 	p.Require().Nil(err)
 	return expr
 }
@@ -138,7 +138,7 @@ func (p TestLexerSuite) TestFunction() {
 	p.Equal("name", *expr.Function.Args[0].Value)
 	p.Equal("http", *expr.Function.Args[1].Directive[0].Name)
 
-	expr = p.lexer("arg( 1, 'name', 'SELECT' )")
+	expr = p.lexer("arg(1, 'name', 'SELECT')")
 	p.Equal("arg", expr.Function.Name)
 	p.Equal(1, *expr.Function.Args[0].Index)
 	p.Equal("name", *expr.Function.Args[1].Value)
@@ -149,7 +149,7 @@ func (p TestLexerSuite) TestFunction() {
 	p.Equal("http", *expr.Function.Args[1].Value)
 	p.Equal("name", *expr.Function.Args[0].Function.Args[0].Function.Args[0].Value)
 
-	expr = p.lexer("arg( ['1', 2, '3', .http], 'name', .http.server)")
+	expr = p.lexer("arg(['1', 2, '3', .http], 'name', .http.server)")
 	p.Len(expr.Function.Args, 3)
 	p.Len(expr.Function.Args[0].Arrays, 4)
 	p.Equal("1", *expr.Function.Args[0].Arrays[0].Value)
@@ -160,6 +160,17 @@ func (p TestLexerSuite) TestFunction() {
 	p.Len(expr.Function.Args[2].Directive, 2)
 	p.Equal("http", *expr.Function.Args[2].Directive[0].Name)
 	p.Equal("server", *expr.Function.Args[2].Directive[1].Name)
+
+	expr = p.lexer("arg(.http, true)")
+	p.Equal("arg", expr.Function.Name)
+	p.True(*expr.Function.Args[1].Boolean)
+}
+
+func (p *TestLexerSuite) TestCondition() {
+	expr := p.lexer(`select(.server_name, 'equal', 'name')`)
+	p.Len(expr.Function.Args, 3)
+	p.Equal("equal", *expr.Function.Args[1].Value)
+	p.Equal("name", *expr.Function.Args[2].Value)
 }
 
 func TestLexer(t *testing.T) {

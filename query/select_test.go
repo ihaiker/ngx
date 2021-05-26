@@ -14,8 +14,7 @@ type TestSelectSuite struct {
 
 func (p *TestSelectSuite) sel(queries ...string) config.Directives {
 	p.T().Log("test: ", strings.Join(queries, " | "))
-	conf, err := config.Parse(
-		"_testdata/nginx.conf")
+	conf, err := config.Parse("_testdata/nginx.conf")
 	p.Nil(err)
 
 	items, err := Selects(conf, queries...)
@@ -25,9 +24,8 @@ func (p *TestSelectSuite) sel(queries ...string) config.Directives {
 
 func (p *TestSelectSuite) TestSelectBase() {
 	items := p.sel(".")
-	p.Len(items, 4)
-	p.Equal("user", items[0].Name)
-	p.Equal("http", items[3].Name)
+	p.Len(items, 1)
+	p.Equal("", items[0].Name)
 
 	items = p.sel(".user")
 	p.Len(items, 1)
@@ -45,7 +43,7 @@ func (p *TestSelectSuite) TestSelectBase() {
 }
 
 func (p TestSelectSuite) TestSelectRegex() {
-	items := p.sel("./(user)|events/")
+	items := p.sel("./^(user)|(events)$/")
 	p.Len(items, 2)
 	p.Equal("user", items[0].Name)
 	p.Equal("events", items[1].Name)
@@ -82,9 +80,18 @@ func (p TestSelectSuite) TestArgs() {
 	p.Equal([]string{"200", "ok"}, items[0].Args)
 }
 
-func (p TestSelectSuite) TestFN() {
-	items := p.sel(".http.server", "select(.server_name,'equal','aginx.x.do')")
-	p.Len(items, 1)
+func (p *TestSelectSuite) TestSelect() {
+	items := p.sel(".http.server", ".location.proxy_pass")
+	p.Len(items, 2)
+	p.Equal("http://127.0.0.1:8012", items.Index(0).Args[0])
+
+	items = p.sel(".http", ".server", ".location.proxy_pass")
+	p.Len(items, 2)
+	p.Equal("http://127.0.0.1:8012", items.Index(0).Args[0])
+
+	items = p.sel(".http", ".server", ".location", ".proxy_pass")
+	p.Len(items, 2)
+	p.Equal("http://127.0.0.1:8012", items.Index(0).Args[0])
 }
 
 func TestSelect(t *testing.T) {
