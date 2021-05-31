@@ -99,12 +99,13 @@ func (p TestLexerSuite) TestBaseIndex() {
 
 func (p TestLexerSuite) TestArgs() {
 	expr := p.lexer(".http('name')")
+	p.Nil(expr.Directive[0].Args.Left.Regex)
 	p.Equal("name", *expr.Directive[0].Args.Left.Value)
 
 	expr = p.lexer(".http.server.server_name('api.aginx.io')")
 	p.Equal("api.aginx.io", *expr.Directive[2].Args.Left.Value)
 
-	for _, opt := range []string{"", "!", "@", "^", "$", "&"} {
+	for _, opt := range []string{"", "!", "@", "^", "$"} {
 		expr = p.lexer(fmt.Sprintf(".server_name(%s'api.aginx.io')", opt))
 		p.Equal(opt, expr.Directive[0].Args.Left.Comparison)
 	}
@@ -130,6 +131,9 @@ func (p TestLexerSuite) TestArgs() {
 	p.Equal("api.aginx.io", *expr.Directive[0].Args.Left.Group.Left.Value)
 	p.Equal("v2.aginx.io", *expr.Directive[0].Args.Left.Group.Right.Value)
 	p.Equal("ssl", *expr.Directive[0].Args.Right.Value)
+
+	expr = p.lexer(`.server_name(/^abc[0-10]{2,}$/)`)
+	p.Equal("/^abc[0-10]{2,}$/", *expr.Directive[0].Args.Left.Regex)
 }
 
 func (p TestLexerSuite) TestFunction() {

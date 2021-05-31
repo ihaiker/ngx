@@ -111,7 +111,7 @@ type Index struct {
 type Args struct {
 	Pos      lexer.Position
 	Left     Arg    `@@`
-	Operator string `[(@("&""&") | @("|""|"))`
+	Operator string `[Space (@("&""&") | @("|""|")) Space`
 	Right    *Arg   `@@]`
 }
 
@@ -129,12 +129,23 @@ func (this *Args) match(args []string) bool {
 
 type Arg struct {
 	Pos        lexer.Position
-	Comparison string  `(([@("!" | "@" | "^" | "$" | "&")]`
+	Comparison string  `(([@("!" | "@" | "^" | "$")]`
 	Value      *string `@String)`
+	Regex      *string `|@Regex`
 	Group      *Args   `|("(" @@ ")"))`
 }
 
 func (this *Arg) matchComparison(comparison string, items []string) bool {
+
+	if this.Regex != nil {
+		for _, item := range items {
+			if match, _ := regexp.MatchString(*this.Regex, item); match {
+				return true
+			}
+		}
+		return false
+	}
+
 	switch this.Comparison {
 	case "!":
 		return !this.matchComparison("", items)
@@ -153,12 +164,6 @@ func (this *Arg) matchComparison(comparison string, items []string) bool {
 	case "$":
 		for _, item := range items {
 			if strings.HasSuffix(*this.Value, item) {
-				return true
-			}
-		}
-	case "&":
-		for _, item := range items {
-			if match, err := regexp.MatchString(*this.Value, item); err == nil && match {
 				return true
 			}
 		}
