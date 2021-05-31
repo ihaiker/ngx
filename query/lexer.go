@@ -16,14 +16,17 @@ type expression struct {
 	Function  *function  `|@@]`
 }
 
+type expressions struct {
+	Exprs []expression `@@ [(" | " @@)+]`
+}
+
 func (expr *expression) call(items config.Directives, fnm *methods.FunctionManager) (config.Directives, error) {
 	if expr.Directive != nil || len(expr.Directive) != 0 {
 		return expr.Directive.call(items)
 	}
 	return expr.Function.callForExpression(items, fnm)
 }
-
-func parseLexer(str string) (expr *expression, err error) {
+func parse(str string, expr interface{}) (err error) {
 	var def *stateful.Definition
 	def, err = stateful.NewSimple([]stateful.Rule{
 		{"String", `("(\\"|[^"])*")|('(\\'|[^'])*')`, nil},
@@ -41,7 +44,6 @@ func parseLexer(str string) (expr *expression, err error) {
 		participle.UseLookahead(2),
 	}
 
-	expr = &expression{}
 	var parser *participle.Parser
 	if parser, err = participle.Build(expr, options...); err != nil {
 		return
@@ -52,5 +54,17 @@ func parseLexer(str string) (expr *expression, err error) {
 				str, strings.Repeat(" ", utp.Position().Offset))
 		}
 	}
+	return
+}
+
+func parseLexer(str string) (expr *expression, err error) {
+	expr = new(expression)
+	err = parse(str, expr)
+	return
+}
+
+func parseLexers(str string) (expr *expressions, err error) {
+	expr = new(expressions)
+	err = parse(str, expr)
 	return
 }

@@ -14,11 +14,20 @@ type testSelectFunctionSuite struct {
 
 func (p *testSelectFunctionSuite) sel(queries ...string) config.Directives {
 	p.T().Log("test: ", strings.Join(queries, " | "))
-	conf, err := config.Parse(
-		"_testdata/nginx.conf")
+	conf, err := config.Parse("_testdata/nginx.conf")
 	p.Nil(err)
 
-	items, err := Selects(conf, queries...)
+	items, err := Select(conf, queries...)
+	p.Nil(err)
+	return items
+}
+
+func (p *testSelectFunctionSuite) sels(query string) config.Directives {
+	p.T().Log("test: ", query)
+	conf, err := config.Parse("_testdata/nginx.conf")
+	p.Nil(err)
+
+	items, err := Selects(conf, query)
 	p.Nil(err)
 	return items
 }
@@ -39,6 +48,10 @@ func (p *testSelectFunctionSuite) TestArgs() {
 	p.Equal("main", items.Index(0).Args[0])
 
 	items = p.sel(".http.log_format", "args(.)")
+	p.Len(items, 1)
+	p.Equal("main", items.Index(0).Args[0])
+
+	items = p.sels(".http.log_format | args(.)")
 	p.Len(items, 1)
 	p.Equal("main", items.Index(0).Args[0])
 

@@ -17,7 +17,7 @@ func (p *TestSelectSuite) sel(queries ...string) config.Directives {
 	conf, err := config.Parse("_testdata/nginx.conf")
 	p.Nil(err)
 
-	items, err := Selects(conf, queries...)
+	items, err := Select(conf, queries...)
 	p.Nil(err)
 	return items
 }
