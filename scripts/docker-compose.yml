@@ -2,7 +2,6 @@ version: "3"
 services:
   mkdocs:
     build: .
-    container_name: ngx-mkdocs
     volumes:
       - ../:/build
 

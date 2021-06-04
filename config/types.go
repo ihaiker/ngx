@@ -74,6 +74,19 @@ func (d *Directive) AddBodyDirective(directives ...*Directive) {
 	d.Body = append(d.Body, directives...)
 }
 
+func (d Directive) Clone() *Directive {
+	nd := &Directive{
+		Line:    d.Line,
+		Virtual: d.Virtual,
+		Name:    d.Name,
+		Args:    d.Args,
+	}
+	if d.Body != nil && len(d.Body) > 0 {
+		nd.Body = d.Body.Clone()
+	}
+	return nd
+}
+
 func (d *Directive) Pretty(prefix int) string {
 	prefixString := strings.Repeat(" ", prefix*4)
 	if d.Name == "#" {
@@ -101,7 +114,7 @@ func (d *Directive) Pretty(prefix int) string {
 				out.WriteRune('\'')
 				out.WriteString(arg)
 				out.WriteRune('\'')
-			} else if strings.ContainsRune(arg, '\'') {
+			} else if arg == "" || strings.ContainsRune(arg, '\'') || strings.ContainsAny(arg, "{};") {
 				out.WriteString(strconv.Quote(arg))
 			} else if strings.ContainsAny(arg, "\t ") {
 				out.WriteString(strconv.Quote(arg))
@@ -169,4 +182,26 @@ func (ds *Directives) Insert(d *Directive, idx int) {
 
 func (ds *Directives) Append(d *Directive) {
 	*ds = append(*ds, d)
+}
+
+func (ds Directives) Names() []string {
+	names := make([]string, 0)
+DLOOP:
+	for _, d := range ds {
+		for _, name := range names {
+			if d.Name == name {
+				continue DLOOP
+			}
+		}
+		names = append(names, d.Name)
+	}
+	return names
+}
+
+func (ds Directives) Clone() Directives {
+	outs := make([]*Directive, len(ds))
+	for i, d := range ds {
+		outs[i] = d.Clone()
+	}
+	return outs
 }
