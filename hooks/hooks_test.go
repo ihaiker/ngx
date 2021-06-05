@@ -104,6 +104,39 @@ func (p testHookSuite) TestParameterHook() {
 	p.Equal(tmpdir, items[0].Args[0])
 }
 
+func (p *testHookSuite) TestSwitch() {
+	set := func(env, field string, serverName, listen string) {
+		_ = os.Setenv("SERVER_TYPE", env)
+		params := hooks.Parameter()
+		params.Add("serverType", field)
+
+		conf := &config.Configuration{
+			Body: p.conf.Body.Clone(),
+		}
+		err := hooks.Switch(params)(conf)
+		p.Nil(err)
+
+		items, err := query.Selects(conf, ".http.server")
+		p.Nil(err)
+		p.Len(items, 2)
+
+		p.Equal(serverName, items[0].Body.Get("server_name").Args[0])
+		p.Equal(listen, items[1].Body.Get("listen").Args[0])
+	}
+
+	set("http", "http", "switch_http", "80")
+	set("http", "https", "switch_http", "443")
+	set("http", "", "switch_http", "8080")
+
+	set("https", "http", "switch_https", "80")
+	set("https", "https", "switch_https", "443")
+	set("https", "", "switch_https", "8080")
+
+	set("", "http", "switch_8080", "80")
+	set("", "https", "switch_8080", "443")
+	set("", "", "switch_8080", "8080")
+}
+
 func TestAfter(t *testing.T) {
 	suite.Run(t, new(testHookSuite))
 }
