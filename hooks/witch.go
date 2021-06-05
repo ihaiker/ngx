@@ -5,13 +5,11 @@ import (
 	"github.com/ihaiker/ngx/v2/config"
 )
 
-func Switch(params Parameters) Hook {
-	return func(conf *config.Configuration) error {
-		return setSwitch(conf, params)
-	}
+type SwitchHooker struct {
+	Parameters *ParametersHooker
 }
 
-func setSwitch(conf *config.Configuration, params Parameters) (err error) {
+func (s *SwitchHooker) Execute(conf *config.Configuration) (err error) {
 	var items config.Directives
 	for idx := 0; ; idx++ {
 		if len(conf.Body) == idx {
@@ -24,7 +22,7 @@ func setSwitch(conf *config.Configuration, params Parameters) (err error) {
 				subConf := &config.Configuration{
 					Body: item.Body,
 				}
-				if err = setSwitch(subConf, params); err != nil {
+				if err = s.Execute(subConf); err != nil {
 					return
 				}
 				item.Body = subConf.Body
@@ -37,8 +35,8 @@ func setSwitch(conf *config.Configuration, params Parameters) (err error) {
 			return
 		}
 
-		value := getSwitchValue(item.Args[0], params)
-		if items, err = getSwitchItems(item, value, params); err != nil {
+		value := s.getSwitchValue(item.Args[0])
+		if items, err = s.getSwitchItems(item, value); err != nil {
 			return
 		}
 
@@ -54,19 +52,19 @@ func setSwitch(conf *config.Configuration, params Parameters) (err error) {
 	}
 }
 
-func getSwitchValue(name string, params Parameters) string {
-	value, err := params.template("${" + name + "}")
+func (s *SwitchHooker) getSwitchValue(name string) string {
+	value, err := s.Parameters.template("${" + name + "}")
 	if err != nil {
 		return ""
 	}
 	return value
 }
 
-func getSwitchItems(conf *config.Directive, value string, params Parameters) (outs config.Directives, err error) {
+func (s *SwitchHooker) getSwitchItems(conf *config.Directive, value string) (outs config.Directives, err error) {
 	outs = config.Directives{}
 
 	subConf := &config.Configuration{Body: conf.Body}
-	if err = setSwitch(subConf, params); err != nil {
+	if err = s.Execute(subConf); err != nil {
 		return
 	}
 	conf.Body = subConf.Body

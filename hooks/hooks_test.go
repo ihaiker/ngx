@@ -1,14 +1,12 @@
 package hooks_test
 
 import (
-	"bytes"
 	"github.com/ihaiker/ngx/v2/config"
 	"github.com/ihaiker/ngx/v2/hooks"
 	"github.com/ihaiker/ngx/v2/query"
 	"github.com/stretchr/testify/suite"
 	"os"
 	"testing"
-	"text/template"
 )
 
 type testHookSuite struct {
@@ -23,8 +21,11 @@ func (p *testHookSuite) SetupTest() {
 }
 
 func (p testHookSuite) TestIncludeMerge() {
-	include := hooks.Include(true, hooks.WalkFiles("./_testdata"))
-	err := include(p.conf)
+	include := &hooks.IncludeHooker{
+		Merge:  true,
+		Search: hooks.WalkFiles("./_testdata"),
+	}
+	err := include.Execute(p.conf)
 	p.Nil(err)
 	items, err := query.Selects(p.conf, ".http.server.server_name")
 	p.Len(items, 2)
@@ -33,8 +34,11 @@ func (p testHookSuite) TestIncludeMerge() {
 }
 
 func (p testHookSuite) TestIncludeNotMerge() {
-	include := hooks.Include(false, hooks.WalkFiles("./_testdata"))
-	err := include(p.conf)
+	include := &hooks.IncludeHooker{
+		Merge:  false,
+		Search: hooks.WalkFiles("./_testdata"),
+	}
+	err := include.Execute(p.conf)
 	p.Nil(err)
 
 	items, err := query.Selects(p.conf, ".http.include.file.server.server_name")
@@ -44,7 +48,8 @@ func (p testHookSuite) TestIncludeNotMerge() {
 }
 
 func (p testHookSuite) TestTemplate() {
-	err := hooks.Template(p.conf)
+	template := &hooks.TemplateHooker{}
+	err := template.Execute(p.conf)
 	p.Nil(err)
 
 	services, err := query.Selects(p.conf, ".http.server")
@@ -55,34 +60,6 @@ func (p testHookSuite) TestTemplate() {
 	p.Equal([]string{"arg0"}, services[1].Args)
 }
 
-func (p *testHookSuite) TestParameter() {
-	type Demo struct {
-		Name string
-	}
-	parameters := hooks.Parameter()
-	parameters.Add("test", "test")
-	parameters.Add("demo", Demo{Name: "demo name"})
-
-	tmp := func(text string) string {
-		temp, err := template.New("").Funcs(parameters.FuncMap()).
-			Delims("${", "}").Parse(text)
-		p.Nil(err)
-		out := bytes.NewBufferString("")
-		err = temp.Execute(out, parameters)
-		p.Nil(err)
-		return out.String()
-	}
-
-	value := tmp("${.env.HOME}")
-	p.Equal(os.Getenv("HOME"), value)
-
-	value = tmp("${.test}")
-	p.Equal("test", value)
-
-	value = tmp("${.demo.Name}")
-	p.Equal("demo name", value)
-}
-
 func (p testHookSuite) TestParameterHook() {
 	tmpdir := os.Getenv("TMPDIR")
 	_ = os.Setenv("WORKER_CONNECTIONS", "24")
@@ -90,7 +67,7 @@ func (p testHookSuite) TestParameterHook() {
 	parameters := hooks.Parameter()
 	parameters.Add("access_log", tmpdir)
 
-	err := parameters.Exec(p.conf)
+	err := parameters.Execute(p.conf)
 	p.Nil(err)
 
 	items, err := query.Selects(p.conf, ".events.worker_connections")
@@ -113,7 +90,10 @@ func (p *testHookSuite) TestSwitch() {
 		conf := &config.Configuration{
 			Body: p.conf.Body.Clone(),
 		}
-		err := hooks.Switch(params)(conf)
+		hooker := &hooks.SwitchHooker{
+			Parameters: params,
+		}
+		err := hooker.Execute(conf)
 		p.Nil(err)
 
 		items, err := query.Selects(conf, ".http.server")
@@ -135,6 +115,30 @@ func (p *testHookSuite) TestSwitch() {
 	set("", "http", "switch_8080", "80")
 	set("", "https", "switch_8080", "443")
 	set("", "", "switch_8080", "8080")
+}
+
+func (p *testHookSuite) TestAll() {
+	include := &hooks.IncludeHooker{
+		Merge:  true,
+		Search: hooks.WalkFiles("./_testdata"),
+	}
+	_ = os.Setenv("SERVER_TYPE", "https")
+	_ = os.Setenv("WORKER_CONNECTIONS", "24")
+
+	parameters := hooks.Parameter()
+	parameters.Add("serverType", "http")
+	parameters.Add("access_log", os.Getenv("TMPDIR"))
+
+	templateHooker := &hooks.TemplateHooker{}
+	switchHooker := &hooks.SwitchHooker{
+		Parameters: parameters,
+	}
+	hookers := hooks.New(parameters, include, templateHooker, switchHooker)
+
+	err := hookers.Execute(p.conf)
+	p.Nil(err)
+
+	p.T().Log(p.conf.Pretty())
 }
 
 func TestAfter(t *testing.T) {

@@ -15,14 +15,50 @@ type (
 		Stream io.ReadCloser
 	}
 	Walk func(args ...string) (files []*File, err error)
+
+	// include后置处理
+	IncludeHooker struct {
+		Merge  bool
+		Search Walk
+	}
 )
 
-// include后置处理
-func Include(merge bool, search Walk) Hook {
-	return func(conf *config.Configuration) (err error) {
-		err = walk(conf, merge, search)
-		return
+func (this *IncludeHooker) Execute(conf *config.Configuration) error {
+	if this.Search == nil {
+		dir, _ := os.Getwd()
+		this.Search = WalkFiles(dir)
 	}
+
+	if conf.Body != nil {
+		for i := 0; i < len(conf.Body); i++ {
+			if len(conf.Body) == i {
+				break
+			}
+
+			item := conf.Body[i]
+
+			if item.Name == "include" {
+				ds, err := this.includes(item)
+				if err != nil {
+					return err
+				}
+				if this.Merge {
+					conf.Body = append(conf.Body[:i], append(ds, conf.Body[i+1:]...)...)
+					i += len(ds) - 1
+				} else {
+					item.Body = append(item.Body, ds...)
+				}
+			} else {
+				subConf := &config.Configuration{Source: "", Body: item.Body}
+				if err := this.Execute(subConf); err != nil {
+					return err
+				} else {
+					item.Body = subConf.Body
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // 本地文件搜索，root为搜索的根路径
@@ -58,42 +94,9 @@ func WalkFiles(root string) Walk {
 	}
 }
 
-func walk(conf *config.Configuration, merge bool, search Walk) error {
-	if conf.Body != nil {
-		for i := 0; i < len(conf.Body); i++ {
-			if len(conf.Body) == i {
-				break
-			}
-
-			item := conf.Body[i]
-
-			if item.Name == "include" {
-				ds, err := includes(search, merge, item)
-				if err != nil {
-					return err
-				}
-				if merge {
-					conf.Body = append(conf.Body[:i], append(ds, conf.Body[i+1:]...)...)
-					i += len(ds) - 1
-				} else {
-					item.Body = append(item.Body, ds...)
-				}
-			} else {
-				subConf := &config.Configuration{Source: "", Body: item.Body}
-				if err := walk(subConf, merge, search); err != nil {
-					return err
-				} else {
-					item.Body = subConf.Body
-				}
-			}
-		}
-	}
-	return nil
-}
-
 //处理include文件
-func includes(search Walk, merge bool, node *config.Directive) (config.Directives, error) {
-	files, err := search(node.Args...)
+func (this *IncludeHooker) includes(node *config.Directive) (config.Directives, error) {
+	files, err := this.Search(node.Args...)
 	if err != nil {
 		return nil, err
 	}
@@ -104,11 +107,11 @@ func includes(search Walk, merge bool, node *config.Directive) (config.Directive
 			return nil, err
 		}
 
-		if err = Include(merge, search)(doc); err != nil {
+		if err = this.Execute(doc); err != nil {
 			return nil, err
 		}
 
-		if merge {
+		if this.Merge {
 			includeFiles = append(includeFiles, doc.Body...)
 		} else {
 			includeFiles = append(includeFiles, &config.Directive{

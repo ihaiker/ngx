@@ -11,21 +11,23 @@ var (
 	iormCompile     = regexp.MustCompile(`@(merge|include)\(([a-zA-Z][a-zA-Z0-9]*)\)`)
 )
 
-func Template(conf *config.Configuration) (err error) {
+type TemplateHooker struct{}
+
+func (t *TemplateHooker) Execute(conf *config.Configuration) (err error) {
 	//查找模板文件
-	templates := searchTemplate(conf)
+	templates := t.searchTemplate(conf)
 
 	//先行处理模板中的合并指令
-	if err = searchMerge(templates, &config.Configuration{Body: templates}); err != nil {
+	if err = t.searchMerge(templates, &config.Configuration{Body: templates}); err != nil {
 		return
 	}
 
 	//执行合并模板
-	err = searchMerge(templates, conf)
+	err = t.searchMerge(templates, conf)
 	return
 }
 
-func getTemplate(templates config.Directives, name string) *config.Directive {
+func (t *TemplateHooker) getTemplate(templates config.Directives, name string) *config.Directive {
 	for _, directive := range templates {
 		if directive.Name == name {
 			return directive
@@ -34,7 +36,7 @@ func getTemplate(templates config.Directives, name string) *config.Directive {
 	return nil
 }
 
-func isTemplate(value string) (matched bool, name string) {
+func (t *TemplateHooker) isTemplate(value string) (matched bool, name string) {
 	if matched = templateCompile.MatchString(value); !matched {
 		return
 	}
@@ -43,7 +45,7 @@ func isTemplate(value string) (matched bool, name string) {
 	return
 }
 
-func isIncludeOrMerge(value string) (include bool, merge bool, name string) {
+func (t *TemplateHooker) isIncludeOrMerge(value string) (include bool, merge bool, name string) {
 	if !iormCompile.MatchString(value) {
 		return
 	}
@@ -55,7 +57,7 @@ func isIncludeOrMerge(value string) (include bool, merge bool, name string) {
 }
 
 //搜索模板
-func searchTemplate(conf *config.Configuration) config.Directives {
+func (t *TemplateHooker) searchTemplate(conf *config.Configuration) config.Directives {
 	var templates config.Directives
 	for idx := 0; ; idx++ {
 		if idx == len(conf.Body) {
@@ -65,13 +67,13 @@ func searchTemplate(conf *config.Configuration) config.Directives {
 		item := conf.Body[idx]
 		if len(item.Body) > 0 {
 			subConf := &config.Configuration{Body: item.Body}
-			if temps := searchTemplate(subConf); temps != nil {
+			if temps := t.searchTemplate(subConf); temps != nil {
 				item.Body = subConf.Body
 				templates = append(templates, temps...)
 			}
 		}
 
-		if matched, name := isTemplate(item.Name); matched {
+		if matched, name := t.isTemplate(item.Name); matched {
 			//remove template directive
 			conf.Body = append(conf.Body[:idx], conf.Body[idx+1:]...)
 			item.Name = name
@@ -81,7 +83,7 @@ func searchTemplate(conf *config.Configuration) config.Directives {
 	return templates
 }
 
-func searchMerge(templates config.Directives, conf *config.Configuration) error {
+func (t *TemplateHooker) searchMerge(templates config.Directives, conf *config.Configuration) error {
 	for idx := 0; ; idx++ {
 		if idx == len(conf.Body) {
 			break
@@ -91,21 +93,21 @@ func searchMerge(templates config.Directives, conf *config.Configuration) error 
 		item := conf.Body[idx]
 		if len(item.Body) > 0 {
 			subConf := &config.Configuration{Body: item.Body}
-			if err := searchMerge(templates, subConf); err != nil {
+			if err := t.searchMerge(templates, subConf); err != nil {
 				return err
 			}
 			item.Body = subConf.Body
 		}
 
 		item = conf.Body[idx]
-		if isInclude, isMerge, name := isIncludeOrMerge(item.Name); isInclude || isMerge {
-			temp := getTemplate(templates, name)
+		if isInclude, isMerge, name := t.isIncludeOrMerge(item.Name); isInclude || isMerge {
+			temp := t.getTemplate(templates, name)
 			if temp == nil {
 				return fmt.Errorf("The template %s not found at line %d", item.Args[0], item.Line)
 			}
 
 			if isMerge {
-				if items, single := merge(item, temp); single {
+				if items, single := t.merge(item, temp); single {
 					item.Name = items[0].Name
 					item.Args = items[0].Args
 					item.Body = items[0].Body
@@ -122,28 +124,15 @@ func searchMerge(templates config.Directives, conf *config.Configuration) error 
 	return nil
 }
 
-func merge(item *config.Directive, temp *config.Directive) (merged config.Directives, single bool) {
+func (t *TemplateHooker) merge(item *config.Directive, temp *config.Directive) (merged config.Directives, single bool) {
 	if len(item.Args) > 0 || len(temp.Args) > 0 {
-		mergeSingle(item, temp)
+		t.mergeSingle(item, temp)
 		return config.Directives{item}, true
 	}
-	return mergeBody(item.Body, temp.Body), false
+	return t.mergeBody(item.Body, temp.Body), false
 }
 
-func getArys(args []string, index int) string {
-	if len(args) > index {
-		return args[index]
-	}
-	return ""
-}
-func sliceArgs(args []string, start int) []string {
-	if len(args) > start {
-		return args[start:]
-	}
-	return nil
-}
-
-func mergeSingle(item *config.Directive, temp *config.Directive) {
+func (t *TemplateHooker) mergeSingle(item *config.Directive, temp *config.Directive) {
 	item.Name = getArys(item.Args, 0)
 	if item.Name == "" {
 		item.Name = getArys(temp.Args, 0)
@@ -153,10 +142,10 @@ func mergeSingle(item *config.Directive, temp *config.Directive) {
 	if len(item.Args) == 0 && len(temp.Args) > 0 {
 		item.Args = sliceArgs(temp.Args, 1)
 	}
-	item.Body = mergeBody(item.Body, temp.Body)
+	item.Body = t.mergeBody(item.Body, temp.Body)
 }
 
-func mergeBody(writes config.Directives, temps config.Directives) config.Directives {
+func (t *TemplateHooker) mergeBody(writes config.Directives, temps config.Directives) config.Directives {
 	outs := temps.Clone()
 	names := writes.Names()
 
