@@ -10,7 +10,7 @@ import (
 
 type directive struct {
 	Pos   lexer.Position
-	Regex *string `"."[ ("*") |  @Regex`
+	Regex *string `"."[ ("*") |  @(["@"] Regex)`
 	Name  *string `| (@Ident|("[" @String "]")) ]`
 	Args  *Args   `[("("@@")")]`
 	Index *Index  `["["@@"]"]`

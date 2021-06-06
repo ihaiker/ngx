@@ -23,44 +23,6 @@ type (
 	}
 )
 
-func (this *IncludeHooker) Execute(conf *config.Configuration) error {
-	if this.Search == nil {
-		dir, _ := os.Getwd()
-		this.Search = WalkFiles(dir)
-	}
-
-	if conf.Body != nil {
-		for i := 0; i < len(conf.Body); i++ {
-			if len(conf.Body) == i {
-				break
-			}
-
-			item := conf.Body[i]
-
-			if item.Name == "include" {
-				ds, err := this.includes(item)
-				if err != nil {
-					return err
-				}
-				if this.Merge {
-					conf.Body = append(conf.Body[:i], append(ds, conf.Body[i+1:]...)...)
-					i += len(ds) - 1
-				} else {
-					item.Body = append(item.Body, ds...)
-				}
-			} else {
-				subConf := &config.Configuration{Source: "", Body: item.Body}
-				if err := this.Execute(subConf); err != nil {
-					return err
-				} else {
-					item.Body = subConf.Body
-				}
-			}
-		}
-	}
-	return nil
-}
-
 // 本地文件搜索，root为搜索的根路径
 func WalkFiles(root string) Walk {
 	return func(args ...string) (files []*File, err error) {
@@ -88,34 +50,35 @@ func WalkFiles(root string) Walk {
 					return
 				}
 			}
-			err = fmt.Errorf("The include file not found: %s", strings.Join(args, ","))
+			err = fmt.Errorf("the include file not found: %s", strings.Join(args, ","))
 		}
 		return
 	}
 }
 
-//处理include文件
-func (this *IncludeHooker) includes(node *config.Directive) (config.Directives, error) {
-	files, err := this.Search(node.Args...)
-	if err != nil {
-		return nil, err
+func (this *IncludeHooker) Execute(conf *config.Directive) (config.Directives, config.Directives, error) {
+	if this.Search == nil {
+		dir, _ := os.Getwd()
+		this.Search = WalkFiles(dir)
 	}
+
+	//搜索到的文件
+	files, err := this.Search(conf.Args...)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	var doc *config.Configuration
-	includeFiles := config.Directives{}
+	items := config.Directives{}
 	for _, file := range files {
 		if doc, err = config.ParseIO(file.Stream); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-
-		if err = this.Execute(doc); err != nil {
-			return nil, err
-		}
-
 		if this.Merge {
-			includeFiles = append(includeFiles, doc.Body...)
+			items = append(items, doc.Body...)
 		} else {
-			includeFiles = append(includeFiles, &config.Directive{
-				Line:    0,
+			items = append(items, &config.Directive{
+				Line:    conf.Line,
 				Virtual: config.Include,
 				Name:    "file",
 				Args:    []string{file.Name},
@@ -123,5 +86,8 @@ func (this *IncludeHooker) includes(node *config.Directive) (config.Directives, 
 			})
 		}
 	}
-	return includeFiles, nil
+	if this.Merge {
+		return items, nil, nil
+	}
+	return nil, items, nil
 }

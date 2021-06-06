@@ -3,144 +3,91 @@ package hooks
 import (
 	"fmt"
 	"github.com/ihaiker/ngx/v2/config"
-	"regexp"
 )
 
-var (
-	templateCompile = regexp.MustCompile(`@template\(([a-zA-Z][a-zA-Z0-9]*)\)`)
-	iormCompile     = regexp.MustCompile(`@(merge|include)\(([a-zA-Z][a-zA-Z0-9]*)\)`)
-)
+type TemplateHooker struct {
+	vars      *Variables
+	templates map[string]*config.Directive
+}
 
-type TemplateHooker struct{}
+func (this *TemplateHooker) SetVariables(variables *Variables) {
+	this.vars = variables
+}
 
-func (t *TemplateHooker) Execute(conf *config.Configuration) (err error) {
-	//查找模板文件
-	templates := t.searchTemplate(conf)
+func (this *TemplateHooker) Execute(item *config.Directive) (config.Directives, config.Directives, error) {
+	if item.Name == "@template" {
+		return this.template(item)
+	} else if item.Name == "@merge" {
+		return this.merge(item)
+	} else {
+		return this.include(item)
+	}
+}
 
-	//先行处理模板中的合并指令
-	if err = t.searchMerge(templates, &config.Configuration{Body: templates}); err != nil {
+func (this *TemplateHooker) template(item *config.Directive) (current config.Directives, children config.Directives, err error) {
+	if this.templates == nil {
+		this.templates = map[string]*config.Directive{}
+	}
+	if len(item.Args) == 0 {
+		err = fmt.Errorf("not found tempalte name at line %d", item.Line)
 		return
 	}
-
-	//执行合并模板
-	err = t.searchMerge(templates, conf)
+	name := item.Args[0]
+	//当前不是个单节点
+	if len(item.Args) > 1 {
+		item.Name = getArys(item.Args, 1)
+		item.Args = sliceArgs(item.Args, 2)
+		this.templates[name] = item
+	} else {
+		this.templates[name] = &config.Directive{
+			Body: item.Body,
+		}
+	}
 	return
 }
 
-func (t *TemplateHooker) getTemplate(templates config.Directives, name string) *config.Directive {
-	for _, directive := range templates {
-		if directive.Name == name {
-			return directive
+func (this *TemplateHooker) include(item *config.Directive) (current config.Directives, children config.Directives, err error) {
+	name := getArys(item.Args, 0)
+	if template, has := this.templates[name]; has {
+		if template.Name == "" {
+			current = template.Body.Clone()
+		} else {
+			current = config.Directives{template.Clone()}
 		}
+	} else {
+		err = fmt.Errorf("not found tempalte name at line %d", item.Line)
 	}
-	return nil
-}
-
-func (t *TemplateHooker) isTemplate(value string) (matched bool, name string) {
-	if matched = templateCompile.MatchString(value); !matched {
-		return
-	}
-	matches := templateCompile.FindStringSubmatch(value)
-	name = matches[1]
 	return
 }
 
-func (t *TemplateHooker) isIncludeOrMerge(value string) (include bool, merge bool, name string) {
-	if !iormCompile.MatchString(value) {
-		return
+func (this *TemplateHooker) merge(item *config.Directive) (current config.Directives, children config.Directives, err error) {
+	name := getArys(item.Args, 0)
+	if template, has := this.templates[name]; !has {
+		err = fmt.Errorf("not found tempalte name at line %d", item.Line)
+	} else {
+		current = this.mergeIt(item.Clone(), template.Clone())
 	}
-	matches := iormCompile.FindStringSubmatch(value)
-	include = matches[1] == "include"
-	merge = !include
-	name = matches[2]
 	return
 }
 
-//搜索模板
-func (t *TemplateHooker) searchTemplate(conf *config.Configuration) config.Directives {
-	var templates config.Directives
-	for idx := 0; ; idx++ {
-		if idx == len(conf.Body) {
-			break
-		}
-
-		item := conf.Body[idx]
-		if len(item.Body) > 0 {
-			subConf := &config.Configuration{Body: item.Body}
-			if temps := t.searchTemplate(subConf); temps != nil {
-				item.Body = subConf.Body
-				templates = append(templates, temps...)
-			}
-		}
-
-		if matched, name := t.isTemplate(item.Name); matched {
-			//remove template directive
-			conf.Body = append(conf.Body[:idx], conf.Body[idx+1:]...)
-			item.Name = name
-			templates = append(templates, item)
-		}
-	}
-	return templates
-}
-
-func (t *TemplateHooker) searchMerge(templates config.Directives, conf *config.Configuration) error {
-	for idx := 0; ; idx++ {
-		if idx == len(conf.Body) {
-			break
-		}
-
-		//先把下层的合并了
-		item := conf.Body[idx]
-		if len(item.Body) > 0 {
-			subConf := &config.Configuration{Body: item.Body}
-			if err := t.searchMerge(templates, subConf); err != nil {
-				return err
-			}
-			item.Body = subConf.Body
-		}
-
-		item = conf.Body[idx]
-		if isInclude, isMerge, name := t.isIncludeOrMerge(item.Name); isInclude || isMerge {
-			temp := t.getTemplate(templates, name)
-			if temp == nil {
-				return fmt.Errorf("The template %s not found at line %d", item.Args[0], item.Line)
-			}
-
-			if isMerge {
-				if items, single := t.merge(item, temp); single {
-					item.Name = items[0].Name
-					item.Args = items[0].Args
-					item.Body = items[0].Body
-				} else { //下级指令合并
-					conf.Body = append(conf.Body[:idx], append(items, conf.Body[idx+1:]...)...)
-					idx += len(items) - 1
-				}
-			} else if isInclude {
-				conf.Body = append(conf.Body[:idx], append(temp.Body, conf.Body[idx+1:]...)...)
-				idx += len(temp.Body) - 1
-			}
-		}
-	}
-	return nil
-}
-
-func (t *TemplateHooker) merge(item *config.Directive, temp *config.Directive) (merged config.Directives, single bool) {
-	if len(item.Args) > 0 || len(temp.Args) > 0 {
+func (t *TemplateHooker) mergeIt(item *config.Directive, temp *config.Directive) (merged config.Directives) {
+	if len(item.Args) > 1 || len(temp.Args) > 0 {
 		t.mergeSingle(item, temp)
-		return config.Directives{item}, true
+		return config.Directives{item}
 	}
-	return t.mergeBody(item.Body, temp.Body), false
+	return t.mergeBody(item.Body, temp.Body)
 }
 
 func (t *TemplateHooker) mergeSingle(item *config.Directive, temp *config.Directive) {
-	item.Name = getArys(item.Args, 0)
+	//改变本身的指令名
+	item.Name = getArys(item.Args, 1)
 	if item.Name == "" {
-		item.Name = getArys(temp.Args, 0)
+		item.Name = temp.Name
 	}
 
-	item.Args = sliceArgs(item.Args, 1)
+	item.Args = sliceArgs(item.Args, 2)
 	if len(item.Args) == 0 && len(temp.Args) > 0 {
-		item.Args = sliceArgs(temp.Args, 1)
+		item.Args = sliceArgs(temp.Args, 0)
 	}
 	item.Body = t.mergeBody(item.Body, temp.Body)
 }

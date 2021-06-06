@@ -79,7 +79,9 @@ func (d Directive) Clone() *Directive {
 		Line:    d.Line,
 		Virtual: d.Virtual,
 		Name:    d.Name,
-		Args:    d.Args,
+	}
+	for _, arg := range d.Args {
+		nd.Args = append(nd.Args, arg)
 	}
 	if d.Body != nil && len(d.Body) > 0 {
 		nd.Body = d.Body.Clone()

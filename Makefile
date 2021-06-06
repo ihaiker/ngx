@@ -6,4 +6,4 @@ godep:
 	go mod download
 
 test: godep
-	go test ./...
+	go test ./... --cover
