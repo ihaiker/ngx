@@ -31,7 +31,7 @@ func (p *TestLexerSuite) TestBase() {
 			}
 		}
 	}
-	base(".http")
+	base(".@http")
 	base(".http.server")
 	base(".http.server.server_name")
 	base(".http.server.listen.set_proxy_header")
