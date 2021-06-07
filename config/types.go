@@ -3,8 +3,15 @@ package config
 import (
 	"bytes"
 	"fmt"
+	"github.com/fatih/color"
 	"strconv"
 	"strings"
+)
+
+var (
+	colorComment = color.New(color.FgYellow, color.Concealed)
+	colorKey     = color.New(color.FgBlue)
+	colorValue   = color.New(color.FgHiGreen)
 )
 
 type (
@@ -89,16 +96,23 @@ func (d Directive) Clone() *Directive {
 	return nd
 }
 
-func (d *Directive) Pretty(prefix int) string {
+func (d *Directive) Pretty(prefix int, colorize ...bool) string {
+	colored := len(colorize) == 1 && colorize[0]
 	prefixString := strings.Repeat(" ", prefix*4)
 	if d.Name == "#" {
+		if colored {
+			return colorComment.Sprintf("%s# %s", prefixString, d.Args[0])
+		}
 		return fmt.Sprintf("%s# %s", prefixString, d.Args[0])
 	} else if d.Virtual != "" {
 		return ""
 	} else {
-
 		out := bytes.NewBufferString(prefixString)
-		out.WriteString(d.Name)
+		if colored {
+			out.WriteString(colorKey.Sprint(d.Name))
+		} else {
+			out.WriteString(d.Name)
+		}
 		splitLine := (len(d.Name) + len(strings.Join(d.Args, " "))) > 80
 
 		for i, arg := range d.Args {
@@ -109,18 +123,33 @@ func (d *Directive) Pretty(prefix int) string {
 			}
 
 			if strings.ContainsAny(arg, "\r\n") {
+				if colored {
+					arg = colorValue.Sprint(arg)
+				}
 				out.WriteRune('`')
 				out.WriteString(arg)
 				out.WriteRune('`')
 			} else if strings.ContainsRune(arg, '"') {
+				if colored {
+					arg = colorValue.Sprint(arg)
+				}
 				out.WriteRune('\'')
 				out.WriteString(arg)
 				out.WriteRune('\'')
 			} else if arg == "" || strings.ContainsRune(arg, '\'') || strings.ContainsAny(arg, "{};") {
+				if colored {
+					arg = colorValue.Sprint(arg)
+				}
 				out.WriteString(strconv.Quote(arg))
 			} else if strings.ContainsAny(arg, "\t ") {
+				if colored {
+					arg = colorValue.Sprint(arg)
+				}
 				out.WriteString(strconv.Quote(arg))
 			} else {
+				if colored {
+					arg = colorValue.Sprint(arg)
+				}
 				out.WriteString(arg)
 			}
 		}
@@ -131,7 +160,7 @@ func (d *Directive) Pretty(prefix int) string {
 			out.WriteString(" {")
 			for _, body := range d.Body {
 				out.WriteString("\n")
-				out.WriteString(body.Pretty(prefix + 1))
+				out.WriteString(body.Pretty(prefix+1, colorize...))
 			}
 			out.WriteString(fmt.Sprintf("\n%s}", prefixString))
 		}
@@ -139,13 +168,13 @@ func (d *Directive) Pretty(prefix int) string {
 	}
 }
 
-func (cfg *Configuration) Pretty() string {
+func (cfg *Configuration) Pretty(colorize ...bool) string {
 	out := bytes.NewBufferString("")
 	for i, item := range cfg.Body {
 		if i != 0 {
 			out.WriteByte('\n')
 		}
-		itemString := item.Pretty(0)
+		itemString := item.Pretty(0, colorize...)
 		_, _ = out.WriteString(itemString)
 	}
 	return out.String()

@@ -17,7 +17,7 @@ type expression struct {
 }
 
 type expressions struct {
-	Exprs []expression `@@ [(" | " @@)+]`
+	Exprs []expression `@@ [(Space "|" Space @@)+]`
 }
 
 func (expr *expression) call(items config.Directives, fnm *methods.FunctionManager) (config.Directives, error) {

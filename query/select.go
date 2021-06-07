@@ -38,7 +38,10 @@ func Selects(conf *config.Configuration, query string) ([]*config.Directive, err
 
 //pql查询志林
 func SelectsWith(conf *config.Configuration, manager *methods.FunctionManager, query string) (items []*config.Directive, err error) {
-	exprs, err := parseLexers(query)
+	var exprs *expressions
+	if exprs, err = parseLexers(query); err != nil {
+		return
+	}
 	items = config.Directives{{Name: "", Body: conf.Body}}
 	for _, expr := range exprs.Exprs {
 		if items, err = expr.call(items, manager); err != nil {
