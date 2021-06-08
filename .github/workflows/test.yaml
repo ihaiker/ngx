@@ -1,4 +1,4 @@
-name: Build
+name: test
 on:
   push:
     branches:
@@ -44,10 +44,3 @@ jobs:
         env:
           GOARCH: ${{ matrix.goarch }}
           GOPROXY: off
-
-  lint:
-    name: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2.3.4
-      - uses: golangci/golangci-lint-action@v2.5.2

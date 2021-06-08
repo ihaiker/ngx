@@ -32,21 +32,21 @@ func (this *function) callForExpression(items config.Directives, manager *method
 		if val, err := this.call(config.Directives{item}, manager); err != nil {
 			return nil, err
 		} else {
-			if val.Type().String() == "bool" {
-				if val.Bool() {
+			if value, match := val.Interface().(bool); match {
+				if value {
+					matched = append(matched, item)
+				}
+			} else if items, match := val.Interface().(config.Directives); match {
+				matched = append(matched, items...)
+			} else if items, match := val.Interface().([]*config.Directive); match {
+				matched = append(matched, items...)
+			} else if item, match := val.Interface().(*config.Directive); match {
+				if item != nil {
 					matched = append(matched, item)
 				}
 			} else {
-				if val.Kind() != reflect.Ptr || !val.IsNil() {
-					if val.Type().String() == "config.Directives" {
-						matched = append(matched, val.Interface().(config.Directives)...)
-					} else if val.Type().String() == "*config.Directive" {
-						matched = append(matched, val.Interface().(*config.Directive))
-					} else {
-						if conf, err := encoding.MarshalOptions(val.Interface(), *encoding.DefaultOptions()); err == nil {
-							matched = append(matched, conf.Body...)
-						}
-					}
+				if conf, err := encoding.MarshalOptions(val.Interface(), *encoding.DefaultOptions()); err == nil {
+					matched = append(matched, conf.Body...)
 				}
 			}
 		}

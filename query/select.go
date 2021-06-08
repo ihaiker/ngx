@@ -48,6 +48,7 @@ func SelectsWith(conf *config.Configuration, manager *methods.FunctionManager, q
 			return
 		}
 		if len(items) == 0 {
+			err = ErrNotFound
 			return
 		}
 	}

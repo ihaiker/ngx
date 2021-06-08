@@ -97,6 +97,11 @@ func (d Directive) Clone() *Directive {
 }
 
 func (d *Directive) Pretty(prefix int, colorize ...bool) string {
+	//fix for delete directive.
+	if d.Name == "" {
+		return ""
+	}
+
 	colored := len(colorize) == 1 && colorize[0]
 	prefixString := strings.Repeat(" ", prefix*4)
 	if d.Name == "#" {
@@ -136,16 +141,14 @@ func (d *Directive) Pretty(prefix int, colorize ...bool) string {
 				out.WriteRune('\'')
 				out.WriteString(arg)
 				out.WriteRune('\'')
-			} else if arg == "" || strings.ContainsRune(arg, '\'') || strings.ContainsAny(arg, "{};") {
+			} else if arg == "" || strings.ContainsRune(arg, '\'') ||
+				strings.ContainsAny(arg, "{};") || strings.ContainsAny(arg, "\t ") {
 				if colored {
-					arg = colorValue.Sprint(arg)
+					arg = colorValue.Sprint(strconv.Quote(arg))
+					out.WriteString(arg)
+				} else {
+					out.WriteString(strconv.Quote(arg))
 				}
-				out.WriteString(strconv.Quote(arg))
-			} else if strings.ContainsAny(arg, "\t ") {
-				if colored {
-					arg = colorValue.Sprint(arg)
-				}
-				out.WriteString(strconv.Quote(arg))
 			} else {
 				if colored {
 					arg = colorValue.Sprint(arg)
@@ -159,8 +162,11 @@ func (d *Directive) Pretty(prefix int, colorize ...bool) string {
 		} else {
 			out.WriteString(" {")
 			for _, body := range d.Body {
-				out.WriteString("\n")
-				out.WriteString(body.Pretty(prefix+1, colorize...))
+				bodyItem := body.Pretty(prefix+1, colorize...)
+				if bodyItem != "" {
+					out.WriteString("\n")
+					out.WriteString(bodyItem)
+				}
 			}
 			out.WriteString(fmt.Sprintf("\n%s}", prefixString))
 		}
