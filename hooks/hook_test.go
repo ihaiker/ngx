@@ -55,8 +55,10 @@ func (p testHookSuite) TestFunc() {
 }
 
 func (p testHookSuite) TestInclude() {
-	items := p.selects("include", ".http.include")
-	p.Len(items, 0)
+	items := p.selects("include", ".http")
+	includes := items.Gets("include")
+	p.Len(includes, 0)
+
 	items = p.selects("include", ".http.server.server_name")
 	p.Len(items, 2)
 	p.Equal("a", items[0].Args[0])
