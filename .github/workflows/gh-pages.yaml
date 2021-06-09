@@ -15,8 +15,19 @@ jobs:
       - name: Checkout main
         uses: actions/checkout@v2
 
-      - name: Deploy docs
-        uses: mhausenblas/mkdocs-deploy-gh-pages@master
+#      - name: Deploy docs
+#        uses: mhausenblas/mkdocs-deploy-gh-pages@master
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#          CONFIG_FILE: mkdocs.yml
+
+      - name: build docs
+        run: make mkdocs
+
+      - name: deploy docs
+        uses: crazy-max/ghaction-github-pages@v2
+        with:
+          target_branch: gh-pages
+          build_dir: site
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CONFIG_FILE: mkdocs.yml
