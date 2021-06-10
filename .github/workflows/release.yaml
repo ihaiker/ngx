@@ -1,4 +1,4 @@
-name: Upload Release Asset
+name: auto-release
 on:
   push:
     tags:
@@ -15,11 +15,16 @@ jobs:
       - name: Build project
         run: sh -c ./build.sh
 
+      - uses: olegtarasov/get-tag@v2.1
+        id: tagName
+        with:
+          tagRegex: "v(.*)"
+
       - name: Read release commits
         id: release_docs
         uses: juliangruber/read-file-action@v1
         with:
-          path: ./docs/versions/${{ github.ref }}.md
+          path: ./docs/versions/${{ steps.tagName.outputs.tag }}.md
 
       - name: Create Release
         id: create_release
@@ -27,8 +32,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ steps.tagName.outputs.tag }}
+          release_name: Release ${{ steps.tagName.outputs.tag }}
           body: ${{ steps.release_docs.outputs.content }}
           draft: false
           prerelease: false
