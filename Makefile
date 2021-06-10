@@ -7,3 +7,9 @@ godep:
 
 test: godep
 	go test ./... --cover
+
+build: test
+	sh -c ./build.sh
+
+clean:
+	@rm -rf bin

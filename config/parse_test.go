@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"testing"
 )
@@ -59,6 +60,12 @@ func (p parseSuite) TestNginxConfig() {
 	conf, err := Parse("../query/_testdata/nginx.conf")
 	p.Nil(err)
 	p.T().Log(conf.Pretty())
+}
+
+func TestParseError(t *testing.T) {
+	conf, err := ParseBytes([]byte(`name test`))
+	require.NotNil(t, err)
+	require.Nil(t, conf)
 }
 
 func TestParse(t *testing.T) {
