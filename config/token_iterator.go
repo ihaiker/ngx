@@ -24,7 +24,7 @@ func newTokenIteratorWithBytes(bs []byte) *tokenIterator {
 	return tokenIt
 }
 
-func (self *tokenIterator) next() (token string, tokenLine int, tokenHas bool) {
+func (self *tokenIterator) next() (token string, tokenLine int, tokenHas bool, err error) {
 	for {
 		char, line, has := self.it.nextFilter(ValidChars)
 		if !has {
@@ -50,7 +50,8 @@ func (self *tokenIterator) next() (token string, tokenLine int, tokenHas bool) {
 			{
 				word, _, wordHas := self.it.nextTo(In(char), true)
 				if !wordHas {
-					panic(fmt.Errorf("error at line : %d", line))
+					err = fmt.Errorf("not found the string end quote %s at line : %d", char, line)
+					return
 				}
 				token = word[:len(word)-1] //remove quota
 				tokenLine = line
@@ -60,7 +61,8 @@ func (self *tokenIterator) next() (token string, tokenLine int, tokenHas bool) {
 		default:
 			word, _, wordHas := self.it.nextTo(Not(ValidChars).Or(In(";", "{")), false)
 			if !wordHas {
-				panic(fmt.Errorf("error at line : %d", line))
+				err = fmt.Errorf("not found the directive end `;` or body block start `{` sat line : %d", line)
+				return
 			}
 			token = char + word
 			tokenLine = line
@@ -72,8 +74,12 @@ func (self *tokenIterator) next() (token string, tokenLine int, tokenHas bool) {
 
 func (self *tokenIterator) expectNext(filter filter) (tokens []string, lastToken string, err error) {
 	tokens = make([]string, 0)
+	var token string
+	var has bool
 	for {
-		if token, _, has := self.next(); has {
+		if token, _, has, err = self.next(); err != nil {
+			return
+		} else if has {
 			if filter(token, "") {
 				lastToken = token
 				return

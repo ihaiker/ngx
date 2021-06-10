@@ -63,9 +63,9 @@ func (p parseSuite) TestNginxConfig() {
 }
 
 func TestParseError(t *testing.T) {
-	conf, err := ParseBytes([]byte(`name test`))
+	_, err := ParseBytes([]byte(`name test`))
 	require.NotNil(t, err)
-	require.Nil(t, conf)
+	t.Log(err)
 }
 
 func TestParse(t *testing.T) {

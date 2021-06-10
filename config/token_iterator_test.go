@@ -20,7 +20,8 @@ http  {
 }
 
 func (p *tokenIteratorSite) assertIt(aToken string, aLine int, aHas bool) {
-	token, line, has := p.it.next()
+	token, line, has, err := p.it.next()
+	p.Nil(err)
 	p.Equal(token, aToken)
 	p.Equal(line, aLine)
 	p.Equal(has, aHas)

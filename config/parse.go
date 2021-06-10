@@ -11,7 +11,10 @@ import (
 func subDirectives(it *tokenIterator) ([]*Directive, error) {
 	directives := make([]*Directive, 0)
 	for {
-		token, line, has := it.next()
+		token, line, has, err := it.next()
+		if err != nil {
+			return nil, err
+		}
 		if !has {
 			break
 		}
@@ -29,7 +32,7 @@ func subDirectives(it *tokenIterator) ([]*Directive, error) {
 			}
 
 			if args, lastToken, err := it.expectNext(In(";", "{")); err != nil {
-				return nil, fmt.Errorf("not found end (%s) [;{] in %d", token, line)
+				return nil, fmt.Errorf("not found directive end `;` or block directive start `{` at `%s` in %d", token, line)
 			} else if lastToken == ";" {
 				directives = append(directives, &Directive{
 					Line: line, Name: token, Args: args,
