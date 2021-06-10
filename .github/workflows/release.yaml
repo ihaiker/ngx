@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    name: Upload Release Asset
+    name: auto-release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -46,9 +46,11 @@ jobs:
           prerelease: false
 
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+        uses: dwenegar/upload-release-assets@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_paths: ./bin/dist/*
+          release_id: ${{ steps.create_release.outputs.id }}
+          assets_path: bin/dist
+#          upload_url: ${{ steps.create_release.outputs.upload_url }}
+#          asset_paths: ./bin/dist/*
