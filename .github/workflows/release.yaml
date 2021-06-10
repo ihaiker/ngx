@@ -20,6 +20,13 @@ jobs:
         with:
           tagRegex: "v(.*)"
 
+      - name: Create release branch
+        uses: peterjgrainger/action-create-branch@v2.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          branch: "release-${{steps.tagName.outputs.tag}}"
+
       - name: Read release commits
         id: release_docs
         uses: juliangruber/read-file-action@v1
