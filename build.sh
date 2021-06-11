@@ -5,6 +5,7 @@ Version=$(git describe --tags $(git rev-list --tags --max-count=1))
 GitCommit=$(git rev-parse HEAD)
 BuildDate=$(date +"%F %T")
 
+binout=nq
 debug="-w -s"
 param="-X main.VERSION=${Version} -X main.GITLOG_VERSION=${GitCommit} -X 'main.BUILD_TIME=${BuildDate}'"
 
@@ -14,12 +15,12 @@ build() {
   export GOOS=$1
   export GOARCH=$2
   export SUFFIX=$3
-  go build -ldflags "${debug} ${param}" -o bin/ngx-${GOOS}-${GOARCH}${SUFFIX} cmd/main.go
+  go build -ldflags "${debug} ${param}" -o bin/${binout}-${GOOS}-${GOARCH}${SUFFIX} cmd/main.go
 
   if [ "$GOOS" == "windows" ]; then
-    zip bin/dist/ngx-${GOOS}-${GOARCH}.zip bin/ngx-${GOOS}-${GOARCH}${SUFFIX}
+    zip bin/dist/${binout}-${GOOS}-${GOARCH}.zip bin/${binout}-${GOOS}-${GOARCH}${SUFFIX}
   else
-    tar -czvf bin/dist/ngx-${GOOS}-${GOARCH}.tar.gz bin/ngx-${GOOS}-${GOARCH}${SUFFIX}
+    tar -czvf bin/dist/${binout}-${GOOS}-${GOARCH}.tar.gz bin/${binout}-${GOOS}-${GOARCH}${SUFFIX}
   fi
 }
 mkdir -p bin/dist

@@ -1,6 +1,6 @@
 .PHONY: mkdocs godep test
 mkdocs:
-	docker-compose -f ./scripts/docker-compose.yml run --rm mkdocs
+	docker-compose -f ./scripts/docker-compose.yml run --rm mkdocs build -c
 
 godep:
 	go mod download

@@ -1,4 +1,20 @@
-site_name: ngx configuration
+site_name: NGX
+site_description: Parsing configuration library
+site_author: Haiker
+site_url: https://ihaiker.github.io/ngx
+repo_url: https://github.com/ihaiker/ngx
+
 nav:
-  - Home: index.md
-theme: readthedocs
+  - 简介: index.md
+  - 功能特性:
+      - "解析配置文件": parse.md
+      - "Marshal/Unmarshal": marshal.md
+      - "配置查询语言PQL": pql.md
+      - "后置hook": hooks.md
+      - "命令行工具": cli.md
+      - "转为JSON": json.md
+  - 版本历史:
+      - 更新列表: versions/index.md
+      - V0.2.0: versions/v0.2.0.md
+
+theme: ivory
