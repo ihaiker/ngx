@@ -2,7 +2,10 @@ package hooks
 
 import (
 	"bytes"
+	"fmt"
 	"os"
+	"reflect"
+	"strconv"
 	"strings"
 	"text/template"
 )
@@ -58,4 +61,59 @@ func (this *Variables) ExecutorArgs(leftDelims, rightDelims string, arg string) 
 	out := bytes.NewBufferString("")
 	err = temp.Execute(out, this.vars)
 	return out.String(), err
+}
+
+func _is(t reflect.Type, kinds ...reflect.Kind) bool {
+	for _, kind := range kinds {
+		if t.Kind() == kind ||
+			(t.Kind() == reflect.Ptr && t.Elem().Kind() == kind) {
+			return true
+		}
+	}
+	return false
+}
+
+func (this *Variables) Get(name string) (interface{}, error) {
+	names := strings.Split(name[1:], ".")
+	value := this.vars[names[0]]
+	for _, fieldName := range names[1:] {
+		rv := reflect.ValueOf(value)
+		if rv.Kind() == reflect.Ptr {
+			rv = rv.Elem()
+		}
+		index := -1
+		if strings.Contains(fieldName, "[") {
+			idx := strings.Index(fieldName, "[")
+			fieldName = fieldName[0:idx]
+			index, _ = strconv.Atoi(fieldName[idx : len(fieldName)-1])
+		}
+
+		if rv.Kind() == reflect.Map { //map key 必须为string 类型
+			fieldValue := rv.MapIndex(reflect.ValueOf(fieldName))
+			if !fieldValue.IsValid() {
+				return nil, fmt.Errorf("not found %s", name)
+			}
+			value = fieldValue.Interface()
+		} else if rv.Kind() == reflect.Struct {
+			fieldValue := rv.FieldByName(fieldName)
+			if !fieldValue.IsValid() {
+				return nil, fmt.Errorf("not found %s", name)
+			}
+			value = fieldValue.Interface()
+		} else {
+			return nil, fmt.Errorf("not found %s", name)
+		}
+
+		if index != -1 && _is(reflect.TypeOf(value), reflect.Slice) {
+			sliceValue := reflect.ValueOf(value)
+			if sliceValue.Kind() == reflect.Ptr {
+				sliceValue = sliceValue.Elem()
+			}
+			if index >= sliceValue.Len() {
+				return nil, fmt.Errorf("index outof %s", name)
+			}
+			value = sliceValue.Index(index).Interface()
+		}
+	}
+	return value, nil
 }

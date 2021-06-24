@@ -10,36 +10,49 @@ type (
 	Hook interface {
 		Execute(item *config.Directive) (current config.Directives, children config.Directives, err error)
 	}
-	Hooks struct {
+	Hooks interface {
+		Execute(conf *config.Configuration) error
+		RegHook(hook Hook, names ...string) Hooks
+		Vars() *Variables
+	}
+	HooksAdapter interface {
+		SetHooks(hooks Hooks)
+	}
+
+	_hooks struct {
 		hooks map[string]Hook
 		*Variables
 	}
 )
 
-func New() *Hooks {
-	hooks := &Hooks{
+func New() Hooks {
+	hooks := &_hooks{
 		hooks:     map[string]Hook{},
 		Variables: NewVariables(),
 	}
 	root, _ := os.Getwd()
-	hooks.Hook(&IncludeHooker{Merge: false, Search: WalkFiles(root)}, "include")
-	hooks.Hook(new(SwitchHooker), "@switch")
-	hooks.Hook(new(RepeatHooker), "@repeat")
-	hooks.Hook(new(TemplateHooker), "@template", "@merge", "@include")
+	hooks.RegHook(&IncludeHooker{Merge: false, Search: WalkFiles(root)}, "include")
+	hooks.RegHook(new(SwitchHooker), "@switch")
+	hooks.RegHook(new(RepeatHooker), "@repeat")
+	hooks.RegHook(new(TemplateHooker), "@template", "@merge", "@include")
 	return hooks
 }
 
 var Defaults = New()
 
 // 注册hook, 可以注册多个名字
-func (this *Hooks) Hook(hook Hook, names ...string) *Hooks {
+func (this *_hooks) RegHook(hook Hook, names ...string) Hooks {
 	for _, name := range names {
 		this.hooks[name] = hook
 	}
 	return this
 }
 
-func (this *Hooks) Execute(conf *config.Configuration) (err error) {
+func (this *_hooks) Vars() *Variables {
+	return this.Variables
+}
+
+func (this *_hooks) Execute(conf *config.Configuration) (err error) {
 
 	var current config.Directives
 	var children config.Directives
@@ -59,12 +72,16 @@ func (this *Hooks) Execute(conf *config.Configuration) (err error) {
 			if variable, match := hook.(VariableAdapter); match {
 				variable.SetVariables(this.Variables)
 			}
+			if hooks, match := hook.(HooksAdapter); match {
+				hooks.SetHooks(this)
+			}
+
 			if current, children, err = hook.Execute(item); err != nil {
 				return
 			}
 			if len(current) > 0 {
 				conf.Body = append(conf.Body[:idx], append(current, conf.Body[idx+1:]...)...)
-				//这里处理include命令的特除性
+				//这里处理include命令的特除性，因为include使用merge模式，当前指令变化，需要再次检查
 				if item.Name != current[0].Name || strings.Join(item.Args, ",") != strings.Join(current[0].Args, ",") {
 					idx-- //由hook处理完成后，需要再次检查，
 					continue

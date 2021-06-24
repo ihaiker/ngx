@@ -146,9 +146,9 @@ func marshal(conf *config.Configuration) (datas []byte, err error) {
 func executeHook(conf *config.Configuration) error {
 	if *hook {
 		path := os.ExpandEnv(*root)
-		hooks.Defaults.Hook(&hooks.IncludeHooker{Merge: *merge, Search: hooks.WalkFiles(path)}, "include")
+		hooks.Defaults.RegHook(&hooks.IncludeHooker{Merge: *merge, Search: hooks.WalkFiles(path)}, "include")
 		for name, value := range *args {
-			hooks.Defaults.Variables.Parameter(name, value)
+			hooks.Defaults.Vars().Parameter(name, value)
 		}
 		if err := hooks.Defaults.Execute(conf); err != nil {
 			return err

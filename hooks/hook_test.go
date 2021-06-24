@@ -12,10 +12,11 @@ import (
 
 type testHookSuite struct {
 	suite.Suite
+	pretty bool
 }
 
 func (p testHookSuite) SetupTest() {
-	hooks.Defaults.Hook(&hooks.IncludeHooker{Merge: true,
+	hooks.Defaults.RegHook(&hooks.IncludeHooker{Merge: true,
 		Search: hooks.WalkFiles("./_testdata")}, "include")
 }
 
@@ -25,6 +26,9 @@ func (p testHookSuite) selects(fileName string, queries string) config.Directive
 
 	err = hooks.Defaults.Execute(conf)
 	p.Nil(err)
+	if p.pretty {
+		p.T().Log(conf.Pretty())
+	}
 
 	items, err := query.Selects(conf, queries)
 	p.Nil(err)
@@ -34,8 +38,8 @@ func (p testHookSuite) selects(fileName string, queries string) config.Directive
 func (p testHookSuite) TestParameter() {
 	serverName := "v2.aginx.io"
 	listen := "80"
-	hooks.Defaults.Parameter("serverName", serverName)
-	hooks.Defaults.Parameter("listen", listen)
+	hooks.Defaults.Vars().Parameter("serverName", serverName)
+	hooks.Defaults.Vars().Parameter("listen", listen)
 
 	items := p.selects("params", ".http.server")
 	p.Len(items, 1)
@@ -46,7 +50,7 @@ func (p testHookSuite) TestParameter() {
 }
 
 func (p testHookSuite) TestFunc() {
-	hooks.Defaults.Func("test_fn", func() string {
+	hooks.Defaults.Vars().Func("test_fn", func() string {
 		return "test_value"
 	})
 	items := p.selects("params", ".user")
@@ -65,7 +69,7 @@ func (p testHookSuite) TestInclude() {
 	p.Equal("b", items[1].Args[0])
 
 	//include merge
-	hooks.Defaults.Hook(&hooks.IncludeHooker{Merge: false,
+	hooks.Defaults.RegHook(&hooks.IncludeHooker{Merge: false,
 		Search: hooks.WalkFiles("./_testdata")}, "include")
 
 	items = p.selects("include", ".http.include")
@@ -83,7 +87,7 @@ func (p *testHookSuite) TestSwitch() {
 		conf, err := config.Parse("./_testdata/switch.ngx.conf")
 		p.Nil(err)
 
-		hooks.Defaults.Parameter("serverType", field)
+		hooks.Defaults.Vars().Parameter("serverType", field)
 		err = hooks.Defaults.Execute(conf)
 		p.Nil(err)
 
@@ -108,7 +112,7 @@ func (p *testHookSuite) TestSwitch() {
 	set("", "", "switch_8080", "8080")
 }
 
-func (p *testHookSuite) TestRepeat() {
+func (p *testHookSuite) TestRepeatArgs() {
 	items := p.selects("repeat", ".http.server.server_name")
 	p.Len(items, 3)
 	p.Equal("a0.aginx.io", items[0].Args[0])
@@ -120,6 +124,50 @@ func (p *testHookSuite) TestRepeat() {
 	p.Equal("80", items[0].Args[0])
 	p.Equal("81", items[1].Args[0])
 	p.Equal("82", items[2].Args[0])
+}
+
+func (p testHookSuite) TestRepeatParameters() {
+	type Server struct {
+		Host string
+		Port int
+	}
+	type Upstream struct {
+		Name    string
+		Servers []Server
+	}
+	hooks.Defaults.Vars().Parameter("servers", []Upstream{
+		{
+			Name: "t1",
+			Servers: []Server{
+				{
+					Host: "t1.host",
+					Port: 1223,
+				},
+			},
+		},
+		{
+			Name: "t2",
+			Servers: []Server{
+				{
+					Host: "t2.host",
+					Port: 1024,
+				},
+				{
+					Host: "t2.host2",
+					Port: 1024,
+				},
+			},
+		},
+	})
+	//p.pretty = true
+	items := p.selects("repeat", ".http.upstream")
+	p.Len(items, 2)
+
+	p.Equal("t1", items[0].Args[0])
+	p.Equal("t2", items[1].Args[0])
+	p.Len(items[0].Body, 1)
+	p.Len(items[1].Body, 2)
+
 }
 
 func (p *testHookSuite) TestTemplate() {
