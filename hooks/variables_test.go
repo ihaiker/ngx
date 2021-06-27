@@ -66,13 +66,6 @@ func (p TestVariablesSuite) TestStruct() {
 	p.T().Log(val, err)
 }
 
-func (p *TestVariablesSuite) TestGet() {
-	p.vars.Parameter("val", nil)
-	val, err := p.vars.Get(".val")
-	p.Nil(err)
-	p.Equal("val", val)
-}
-
 func TestVariables(t *testing.T) {
 	suite.Run(t, new(TestVariablesSuite))
 }
