@@ -56,7 +56,7 @@ func WalkFiles(root string) Walk {
 	}
 }
 
-func (this *IncludeHooker) Execute(conf *config.Directive) (config.Directives, config.Directives, error) {
+func (this *IncludeHooker) Execute(conf *config.Directive, _ Next) (config.Directives, config.Directives, error) {
 	if this.Search == nil {
 		dir, _ := os.Getwd()
 		this.Search = WalkFiles(dir)

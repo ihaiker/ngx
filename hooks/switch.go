@@ -14,7 +14,7 @@ func (s *SwitchHooker) SetVariables(variables *Variables) {
 	s.Variables = variables
 }
 
-func (s *SwitchHooker) Execute(item *config.Directive) (current config.Directives, children config.Directives, err error) {
+func (s *SwitchHooker) Execute(item *config.Directive, _ Next) (current config.Directives, children config.Directives, err error) {
 	if len(item.Args) == 0 {
 		err = fmt.Errorf("not found switch value at line %d", item.Line)
 		return

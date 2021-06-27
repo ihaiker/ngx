@@ -67,7 +67,7 @@ func (p TestVariablesSuite) TestStruct() {
 }
 
 func (p *TestVariablesSuite) TestGet() {
-	p.vars.Parameter("val", "val")
+	p.vars.Parameter("val", nil)
 	val, err := p.vars.Get(".val")
 	p.Nil(err)
 	p.Equal("val", val)

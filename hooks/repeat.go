@@ -25,7 +25,7 @@ func (this *RepeatHooker) SetVariables(variables *Variables) {
 	this.vars = variables
 }
 
-func (this *RepeatHooker) Execute(item *config.Directive) (current config.Directives, children config.Directives, err error) {
+func (this *RepeatHooker) Execute(item *config.Directive, _ Next) (current config.Directives, children config.Directives, err error) {
 	var values []interface{}
 	var key string //循环变量的名字
 	if key, values, err = this.getRepeatArray(item); err != nil {

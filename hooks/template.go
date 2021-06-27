@@ -14,7 +14,7 @@ func (this *TemplateHooker) SetVariables(variables *Variables) {
 	this.vars = variables
 }
 
-func (this *TemplateHooker) Execute(item *config.Directive) (config.Directives, config.Directives, error) {
+func (this *TemplateHooker) Execute(item *config.Directive, _ Next) (config.Directives, config.Directives, error) {
 	if item.Name == "@template" {
 		return this.template(item)
 	} else if item.Name == "@merge" {

@@ -7,8 +7,9 @@ import (
 )
 
 type (
+	Next func(filter func(*config.Directive) bool) *config.Directive
 	Hook interface {
-		Execute(item *config.Directive) (current config.Directives, children config.Directives, err error)
+		Execute(item *config.Directive, next Next) (current config.Directives, children config.Directives, err error)
 	}
 	Hooks interface {
 		Execute(conf *config.Configuration) error
@@ -35,6 +36,7 @@ func New() Hooks {
 	hooks.RegHook(new(SwitchHooker), "@switch")
 	hooks.RegHook(new(RepeatHooker), "@repeat")
 	hooks.RegHook(new(TemplateHooker), "@template", "@merge", "@include")
+	hooks.RegHook(new(IfElseHooker), "@if")
 	return hooks
 }
 
@@ -61,6 +63,16 @@ func (this *_hooks) Execute(conf *config.Configuration) (err error) {
 		if idx == len(conf.Body) {
 			break
 		}
+
+		next := func(filter func(*config.Directive) bool) *config.Directive {
+			if idx+1 < len(conf.Body) && filter(conf.Body[idx+1]) {
+				item := conf.Body[idx+1]
+				conf.Body = append(conf.Body[:idx+1], conf.Body[idx+2:]...)
+				return item
+			}
+			return nil
+		}
+
 		item := conf.Body[idx]
 		for i, arg := range item.Args {
 			if item.Args[i], err = this.ExecutorArgs("${", "}", arg); err != nil {
@@ -76,7 +88,7 @@ func (this *_hooks) Execute(conf *config.Configuration) (err error) {
 				hooks.SetHooks(this)
 			}
 
-			if current, children, err = hook.Execute(item); err != nil {
+			if current, children, err = hook.Execute(item, next); err != nil {
 				return
 			}
 			if len(current) > 0 {

@@ -175,6 +175,16 @@ func (p *testHookSuite) TestTemplate() {
 	p.Len(items, 2)
 }
 
+func (p *testHookSuite) TestIfElse() {
+	hooks.Defaults.Vars().Parameter("s1", "true")
+	hooks.Defaults.Vars().Parameter("s2", "https")
+	hooks.Defaults.Vars().Parameter("s3", "http2")
+
+	//p.pretty = true
+	items := p.selects("ifelse", ".http.server.listen")
+	p.Len(items, 3)
+}
+
 func TestHooks(t *testing.T) {
 	suite.Run(t, new(testHookSuite))
 }
