@@ -54,8 +54,8 @@ func MarshalOptions(v interface{}, options Options) (*config.Configuration, erro
 	value := reflect.ValueOf(v)
 	valueType := value.Type()
 	if value.Kind() == reflect.Ptr {
-		valueType = value.Elem().Type()
 		value = value.Elem()
+		valueType = value.Type()
 	}
 
 	if items, handlered, err := options.TypeHandlers.MarshalNgx(v); err != nil || handlered {
@@ -65,7 +65,7 @@ func MarshalOptions(v interface{}, options Options) (*config.Configuration, erro
 	items := config.Directives{}
 	if valueType.String() == "time.Time" {
 		t := value.Interface().(time.Time)
-		value := strconv.Quote(t.Format(data_format("", options)))
+		value := t.Format(data_format("", options))
 		return conf(config.New("key", value)), nil
 	}
 
@@ -144,7 +144,11 @@ func MarshalOptions(v interface{}, options Options) (*config.Configuration, erro
 				val := fieldValue.Interface().(time.Time).Format(format)
 				items = append(items, config.New(fieldName, val))
 			} else {
-				if confItems, err := MarshalOptions(fieldValue.Interface(), options); err != nil {
+				opts := Options{
+					DateFormat:   format,
+					TypeHandlers: options.TypeHandlers,
+				}
+				if confItems, err := MarshalOptions(fieldValue.Interface(), opts); err != nil {
 					return nil, err
 				} else {
 					if isBase(field.Type) || field.Type.Kind() == reflect.Slice {
