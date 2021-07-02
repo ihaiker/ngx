@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <meta name="author" content="Haiker">
+  <link rel="canonical" href="https://ihaiker.github.io/ngx/marshal/">
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>Marshal/Unmarshal - NGX</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="../css/theme.css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+  <link href="../extra.css" rel="stylesheet" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Marshal/Unmarshal";
+    var mkdocs_page_input_path = "marshal.md";
+    var mkdocs_page_url = "/ngx/marshal/";
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> NGX</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="..">简介</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">功能特性</span></p>
+                <ul class="current">
+                    <li class="toctree-l1"><a class="reference internal" href="../parse/">解析配置文件</a>
+                    </li>
+                    <li class="toctree-l1 current"><a class="reference internal current" href="./">Marshal/Unmarshal</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#_1">名词解释</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_2">简单模式</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_3">复杂模式</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#slice">切片Slice类型</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#1">1、基础类型的切片</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#2">2、非基础型的切片</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#map">map类型</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#1value">1、对于value为基础类型</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#2value">2、对于value非基础类型</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_4">重复覆盖</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_5">自定义解析</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#json">转JSON配置</a>
+    </li>
+    </ul>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../pql/">配置查询语言PQL</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../hooks/">后置hook</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../cli/">命令行工具</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../json/">转为JSON</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../versions/">版本历史</a>
+                    </li>
+                </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">NGX</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>功能特性 &raquo;</li>
+        
+      
+    
+    <li>Marshal/Unmarshal</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        <a href="https://github.com/ihaiker/ngx/edit/master/docs/marshal.md"
+          class="icon icon-github"> Edit on GitHub</a>
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="marshal-unmarshal">Marshal &amp; Unmarshal</h1>
+<p>阅读本章节之前您需要先行阅读</p>
+<ul>
+<li><a href="../parse/">解析配置文件</a></li>
+<li><a href="https://golang.org/pkg/encoding/json/" title="JSON">json.Marshal &amp; json.Unmarshal</a></li>
+</ul>
+<p>如果您了解<code>json.Marshal</code>和<code>json.Unmarshal</code>那么本章节就简单的多（不了解？<a href="https://golang.org/pkg/encoding/json/" title="JSON">点击了解</a>）。</p>
+<p>由于配置文件的特殊性：<code>块</code>既可以包含<code>参数</code> 亦可以包含 <code>子块</code>。而在<code>json</code>或<code>yaml</code>中不存在这列情况。
+所以我们分为两个部分讲解 Marshal:</p>
+<ul>
+<li>简单模式：<code>块</code>存在参数就不存在<code>子块</code>, <code>Args</code>和<code>Body</code>不同时存在。</li>
+<li>符合模式： 两者同时存在</li>
+</ul>
+<h2 id="_1">名词解释</h2>
+<p><strong>基础类型</strong>：int,[u]int[8|16|32|64],string,bool,time.Time类型以及对应的指针类型。</p>
+<h2 id="_2">简单模式</h2>
+<p>加入我们现在有一个配置文件：</p>
+<pre><code class="language-nginx">user haiker;
+address &quot;Beijing China&quot;;
+email ni@renzhen.la;
+workyear 10;
+Hobby basketball football &quot;D D D&quot; etc;
+time &quot;2021-06-11 12:13:14&quot;;
+</code></pre>
+<p>对应的的Golang结构体：</p>
+<pre><code class="language-nginx">type User struct {
+    UserName string `ngx:&quot;user&quot;`
+    Address string  `ngx:&quot;address&quot;`
+    Email string    `ngx:&quot;email&quot;`
+    Year int        `ngx:&quot;workyear&quot;`
+    Hobby []string 
+    Time time.Time  `ngx:&quot;time,2016-01-02 15:04:05&quot;`
+} 
+</code></pre>
+<p>我们可以看到<code>Marshal</code>和<code>json.Marshal</code> 是一样的处理发方式。<code>略过。。。。。</code>，我们将把重点放在复杂模式上。</p>
+<h2 id="_3">复杂模式</h2>
+<pre><code>复杂模式是针对一个特殊的类型做出的处理。他们包括了`slice`和`map`
+</code></pre>
+<h3 id="slice">切片Slice类型</h3>
+<h4 id="1">1、基础类型的切片</h4>
+<p>对于<code>[]int</code>,<code>[]string</code>,<code>[]bool</code>等基本类型的切片而言，我们只可以使用<code>块</code>的参数<code>args</code>赋值。</p>
+<p>例如： 在简单模式中 <code>User.Hobby</code> 字段，我们可以使用下面方式方式赋予其值。</p>
+<pre><code class="language-nginx">Hobby basketball football &quot;D D D&quot; etc;
+</code></pre>
+<p>也可以修改为多次指令赋予slice值。</p>
+<pre><code class="language-nginx">Hobby basketball; 
+Hobby football;
+Hobby &quot;D D D&quot; etc;
+</code></pre>
+<p>上面两种方式无论哪个对于最终结果是一致的。</p>
+<h4 id="2">2、非基础型的切片</h4>
+<p>对于非基础类型的切片，就不可以像基础类型那样了两者均可使用。非基础类型只能采用多<code>块</code>配置方式。
+例如：当配置 <code>Group</code>中包含<code>[]*User</code> 字段 我们就需要使用下面的配置。</p>
+<pre><code class="language-nginx">type Group struct {
+    Users []*User `ngx:&quot;users&quot;`
+}
+</code></pre>
+<p>配置如下</p>
+<pre><code class="language-nginx">users {
+    user haiker;
+    address &quot;Beijing China&quot;;
+    email ni@renzhen.la;
+    workyear 10;
+    Hobby basketball football &quot;D D D&quot; etc;
+    time &quot;2021-06-11 12:13:14&quot;;
+}
+users {
+    user submitter;
+    address &quot;Beijing China&quot;;
+    email demo@example.com;
+    workyear 10;
+    Hobby basketball;
+    time &quot;2021-06-11 12:13:14&quot;;
+}
+...
+</code></pre>
+<h3 id="map">map类型</h3>
+<p>Note: 配置文件转为map的类型，是有一定的规定，在map的key值类型只能为基础类型。</p>
+<h4 id="1value">1、对于value为基础类型</h4>
+<p>我们将直接采用<code>块</code>的<code>参数</code>进行值的赋予，且<code>参数1</code>为map的key, <code>参数2</code>为map的value。</p>
+<pre><code class="language-nginx">mapFiled mapKey mapValue;
+mapFiled mapKey mapValue;
+mapFiled mapKey mapValue;
+
+mapFiled1 mapKey mapValue;
+mapFiled1 mapKey mapValue;
+mapFiled1 mapKey mapValue;
+</code></pre>
+<h4 id="2value">2、对于value非基础类型</h4>
+<p>1、方式一：<code>块</code>的<code>参数1</code>作为key， <code>子块</code>作为value的配置。</p>
+<pre><code class="language-nginx">mapField key1 {
+    valueField value;
+    ...
+}
+mapField key2 {
+    valueField value;
+    ...
+}
+</code></pre>
+<p>2、方式二：<code>块</code>的<code>子块</code>块名称作为key</p>
+<pre><code class="language-nginx">mapField {
+    key1 {
+        valueField value;
+        ...
+    }
+    key2 {
+        valueField value;
+        ...
+    }
+}
+</code></pre>
+<p>上面两种方式配置Unmarshal后对应的结果完全一致的。<strong>如果采用了第二种方式配置map并且在子块上也添加了参数，将会报错。</strong>
+例如：</p>
+<pre><code class="language-nginx">mapField {
+    key1 arg0 { ## 这里不允许再次添加参数。。
+        valueField value;
+        ...
+    }
+    key2 {
+        valueField value;
+        ...
+    }
+}
+</code></pre>
+<h2 id="_4">重复覆盖</h2>
+<p>由于文件特性，很多时候可以指定相同的<code>块名称</code>的配置，配置文件本省并不存在错误，但是我们才用<code>Unmarshal</code>后对应的一个<code>基础类型</code>字段上的话，相当于对此赋值，最后出现的一次将生效，请注意这个默认选项。</p>
+<h2 id="_5">自定义解析</h2>
+<p>如同<code>encoding/json</code>定义的<code>json.Unmarshaler</code>和<code>json.Marshaler</code>一样，
+ngx也定义了<code>encoding.Marshaler</code>和<code>encoding.Unmarshalers</code> 方法, 定义如下：</p>
+<pre><code class="language-nginx">type Marshaler interface {
+    MarshalNgx() (*config.Configuration, error)
+}
+
+type Unmarshaler interface {
+    UnmarshalNgx(item *config.Configuration) error
+}
+</code></pre>
+<p>如果你需要自定义解析方式实现该方法即可。例如：</p>
+<pre><code class="language-nginx">
+type User struct {
+    UserName string `ngx:&quot;name&quot;`
+    Address string  `ngx:&quot;address&quot;`
+    Email string    `ngx:&quot;email&quot;`
+    Year int        `ngx:&quot;workyear&quot;`
+    Hobby []string
+    Time time.Time  `ngx:&quot;time,2016-01-02 15:04:05&quot;`
+}
+
+func (user *User) MarshalNgx() (conf *config.Configuration,err error) {
+    conf = &amp;config.Configuration{
+        Body: config.Directives{},
+    }
+    firstAndLastName := strings.SplitN(user.Name,&quot;.&quot;, 2)
+    conf.Body = append(conf.Body,config.New(&quot;firstName&quot;,firstAndLastName[0]))
+    conf.Body = append(conf.Body,config.New(&quot;lastName&quot;,firstAndLastName[1]))
+    conf.Body = append(conf.Body,config.New(&quot;address&quot;,user.Address))
+    ...
+    return
+}
+
+func (user *User) UnmarshalNgx(item *config.Configuration) (err error) {
+    if len(item.Body) == 0 {
+        return
+    }
+
+    if firstName := item.Body.Get(&quot;firstName&quot;); firstName != nil {
+        user.UserName = firstName.Args[0]   
+    }
+    if lastName := item.Body.Get(&quot;lastName&quot;); lastName != nil {
+        user.UserName = lastName.Args[0]
+    }
+    return
+}
+</code></pre>
+<p>我们的<code>User</code>结构体，可以实现<code>encoding.Marshaler</code>和<code>encoding.Unmarshaler</code>方法去实现自定义的解析。</p>
+<p>如果我们在配置中使用了第三方的库，此时无法让结构式实现接口，
+因此系统同时也提供了<code>encoding.RegTypeHandler(v interface{}, handler encoding.TypeHandler)</code>方法指定特定第三方类型的解析方式。</p>
+<p><code>encoding.TypeHandler</code> 定义如下：</p>
+<pre><code class="language-nginx">TypeHandler interface {
+    MarshalNgx(v interface{}) (*config.Configuration, error)
+    UnmarshalNgx(item *config.Configuration) (v interface{}, err error)
+}
+</code></pre>
+<p>更多玩法，赶快试用起来吧。</p>
+<h2 id="json">转JSON配置</h2>
+<p>本配置同时也提供了将配置转换为JSON配置<a href="../json/">了解更多</a></p>
+<blockquote>
+<p>Note: 开源作者的英语能力有限，编写文档英文全靠翻译软件，难免存在歧义，
+如果您可以为本软件编写英文文档请联系作者<a href="mailto:ni.renzhen.la">Haiker</a>或提交PR，
+感谢您对本工具的做出的贡献。
+</p>
+</blockquote>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../pql/" class="btn btn-neutral float-right" title="配置查询语言PQL">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../parse/" class="btn btn-neutral" title="解析配置文件"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+      <p>Copyright @2021 Haiker</p>
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/ihaiker/ngx/" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../parse/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../pql/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <meta name="author" content="Haiker">
+  <link rel="canonical" href="https://ihaiker.github.io/ngx/parse/">
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>解析配置文件 - NGX</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="../css/theme.css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+  <link href="../extra.css" rel="stylesheet" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "\u89e3\u6790\u914d\u7f6e\u6587\u4ef6";
+    var mkdocs_page_input_path = "parse.md";
+    var mkdocs_page_url = "/ngx/parse/";
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> NGX</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="..">简介</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">功能特性</span></p>
+                <ul class="current">
+                    <li class="toctree-l1 current"><a class="reference internal current" href="./">解析配置文件</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#_2">安装</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_3">实例</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_4">结构说明</a>
+    </li>
+    </ul>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../marshal/">Marshal/Unmarshal</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../pql/">配置查询语言PQL</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../hooks/">后置hook</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../cli/">命令行工具</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../json/">转为JSON</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../versions/">版本历史</a>
+                    </li>
+                </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">NGX</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>功能特性 &raquo;</li>
+        
+      
+    
+    <li>解析配置文件</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        <a href="https://github.com/ihaiker/ngx/edit/master/docs/parse.md"
+          class="icon icon-github"> Edit on GitHub</a>
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+
+          <div role="main">
+            <div class="section">
+              
+                <h2 id="_1">使用指南</h2>
+<h3 id="_2">安装</h3>
+<pre><code class="language-nginx">go get github.com/ihaiker/ngx/v2
+</code></pre>
+<h3 id="_3">实例</h3>
+<blockquote>
+<p>Note: 为了方便，我们直接使用nginx的配置文件做讲解</p>
+</blockquote>
+<p>加入我们已有<code>/etc/nginx/nginx.conf</code>配置文件，且内容如下：</p>
+<pre><code class="language-nginx">user nobody;
+worker_processes auto;
+events  {
+    worker_connections 1024;
+}
+http  {
+    include mime.types;
+    default_type application/octet-stream;
+    log_format main '$remote_addr - $remote_user [$time_local] &quot;$request&quot; '
+                    '$status $body_bytes_sent &quot;$http_referer&quot; '
+                    '&quot;$http_user_agent&quot; &quot;$http_x_forwarded_for&quot;';
+    # access_log  /var/log/nginx/access.log  main;
+    sendfile on;
+    # tcp_nopush     on;
+    keepalive_timeout 65;
+    gzip on;
+    include conf.d/*.conf;
+}
+</code></pre>
+<p>解析Golang代码如下： </p>
+<pre><code class="language-nginx">
+package main
+
+import (
+    &quot;fmt&quot;
+    &quot;github.com/ihaiker/ngx/v2&quot;
+)
+
+func main() {
+    conf, err := ngx.Parse(&quot;/etc/nginx/nginx.conf&quot;)
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
+
+    fmt.Println(&quot;--- configuration body ---&quot;)
+    for i, item := range conf.Body {
+        fmt.Println(i, &quot;: &quot;, item.Name)
+    }
+
+    fmt.Println(&quot;--- http body ---&quot;)
+    for i, item := range conf.Body[3].Body {
+        fmt.Println(i, &quot;: &quot;, item.Name)
+    }
+}
+
+</code></pre>
+<p>run it, the following will be print:</p>
+<pre><code class="language-shell">--- configuration body ---
+0 :  user
+1 :  worker_processes
+2 :  events
+3 :  http
+--- http body ---
+0 :  include
+1 :  default_type
+2 :  log_format
+3 :  #
+4 :  sendfile
+5 :  #
+6 :  keepalive_timeout
+7 :  gzip
+8 :  include
+include args:  mime.types
+</code></pre>
+<h3 id="_4">结构说明</h3>
+<p>首先，我们来分析一下配置文件的结构。结构有以下规则：</p>
+<pre><code class="language-nginx">name [arg0 arg1 arg3 ...];
+name [arg0 arg1 ... argN] {
+    name [arg0 arg1 ...];
+    name [arg0 arg1 ...];
+}
+</code></pre>
+<p>由上结构可分析出，组成他的最小化单元是块，这个块由<code>块名称</code> <strong>name</strong>，<code>块参数</code> <strong>arg0 arg1 arg2</strong>(可选的), <code>子块</code>（可选）组成，
+且<code>子块</code>结构也是按照块的结构组成，依次类推。</p>
+<p>因此，我们将配置文件解析为 Golang 结构为:</p>
+<pre><code class="language-nginx">type Directive struct {
+    Line    int        `json:&quot;line&quot;`
+    Virtual Virtual    `json:&quot;virtual,omitempty&quot;`
+    Name    string     `json:&quot;name&quot;`
+    Args    []string   `json:&quot;args,omitempty&quot;`
+    Body    Directives `json:&quot;body,omitempty&quot;`
+}
+</code></pre>
+<p>在 Golang struct <code>Directive</code> 中包含 <code>Line</code>,<code>Name</code>,<code>Args</code>,<code>Body</code> 字段.
+<code>Line</code> 字段保存了当前块出现在文件的行号， 
+<code>Name</code> 字段存放块的名称, 
+<code>Args</code> 字段为块的参数,
+<code>Body</code> 字段为子块.
+<code>Virtual</code> 字段有些特出，为<a href="../hooks/">Post-hook</a>方法准备，用于解决include这样的特出指令。</p>
+<p>调用解析后程序会生成<code>config.Configuration</code>结构体，保存配置信息。</p>
+<pre><code class="language-nginx">type (
+    Directives    []*Directive
+    Configuration struct {
+        Source string     `json:&quot;source&quot;` //配置文件来源：files://, stdin, parse: hql
+        Body   Directives `json:&quot;body&quot;`
+    }
+)
+</code></pre>
+<p>但是，我们也可以发现，到现在虽然我们已经将文件解析了，但是他的使用上来看并不是很优雅，
+我们查找一个字段的时候需要多次循序，例如：<code>conf.Body[2].Body[1].Args[0]</code> 因此我们编写了方便的处理方式：</p>
+<ul>
+<li><a href="../marshal/">Marshal/Unmarshal指南</a> 整合到自定义结构体中。</li>
+<li><a href="../pql/">PQL查询语言</a>  配置查询语言，简单快捷查询</li>
+</ul>
+<blockquote>
+<p>Note: 开源作者的英语能力有限，编写文档英文全靠翻译软件，难免存在歧义，
+如果您可以为本软件编写英文文档请联系作者<a href="mailto:ni.renzhen.la">Haiker</a>或提交PR，
+感谢您对本工具的做出的贡献。
+</p>
+</blockquote>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../marshal/" class="btn btn-neutral float-right" title="Marshal/Unmarshal">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href=".." class="btn btn-neutral" title="简介"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+      <p>Copyright @2021 Haiker</p>
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/ihaiker/ngx/" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../marshal/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

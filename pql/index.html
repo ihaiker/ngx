@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <meta name="author" content="Haiker">
+  <link rel="canonical" href="https://ihaiker.github.io/ngx/pql/">
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>配置查询语言PQL - NGX</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="../css/theme.css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+  <link href="../extra.css" rel="stylesheet" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "\u914d\u7f6e\u67e5\u8be2\u8bed\u8a00PQL";
+    var mkdocs_page_input_path = "pql.md";
+    var mkdocs_page_url = "/ngx/pql/";
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> NGX</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="..">简介</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">功能特性</span></p>
+                <ul class="current">
+                    <li class="toctree-l1"><a class="reference internal" href="../parse/">解析配置文件</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../marshal/">Marshal/Unmarshal</a>
+                    </li>
+                    <li class="toctree-l1 current"><a class="reference internal current" href="./">配置查询语言PQL</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#demo">实例Demo</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_1">语法介绍</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#_2">. 指令</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#namenamesubname">.name或.name.subname 指令</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#namenamenamename">.!name，.@name，.^name，.$name 指令</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#regex">./Regex/ 指令</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#name0">.name[0] 指令</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#namevalue">.name("value") 指令</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#_3">" | " 管道处理</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_4">系统查询方法</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_5">自定义查询方法</a>
+    </li>
+    </ul>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../hooks/">后置hook</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../cli/">命令行工具</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../json/">转为JSON</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../versions/">版本历史</a>
+                    </li>
+                </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">NGX</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>功能特性 &raquo;</li>
+        
+      
+    
+    <li>配置查询语言PQL</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        <a href="https://github.com/ihaiker/ngx/edit/master/docs/pql.md"
+          class="icon icon-github"> Edit on GitHub</a>
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="pql">PQL 配置查询语言</h1>
+<p>阅读本章节内容之前您必须先行了解：<a href="../parse/">配置文件解析</a></p>
+<p>如果您阅读了之前的章节，您会发现配置在使用上其实并不是特别简单和明了，
+我们提供了<a href="../marshal/">Marshal/Unmarshal</a>方式让使用更简单，
+同时也提供了配置搜索功能，给他在插上一双翅膀。</p>
+<h2 id="demo">实例Demo</h2>
+<p>为了让本章节所有的讲解可以更容易理解，我们使用一个<code>nginx.conf</code>来说明：</p>
+<pre><code class="language-nginx">user  nginx;
+worker_processes auto;
+events  {
+    worker_connections 1024;
+}
+
+http  {
+    include mime.types;
+    default_type application/octet-stream;
+    log_format main '$remote_addr - $remote_user [$time_local] &quot;$request&quot; '
+              '$status $body_bytes_sent &quot;$http_referer&quot; '
+              '&quot;$http_user_agent&quot; &quot;$http_x_forwarded_for&quot;';
+
+    # access_log  /var/log/nginx/access.log  main;
+    sendfile on;
+    # tcp_nopush     on;
+    keepalive_timeout 65;
+    gzip on;
+
+    include hosts.d/*.conf;
+
+    upstream t1 {
+        server 127.0.0.1:8001;
+    }
+    upstream t2 {
+        server 127.0.0.1:8002;
+    }
+    upstream t3 {
+        server 127.0.0.1:8002;
+    }
+    server  {
+        listen 80;
+        server_name _;
+        location / {
+            root /Users/haiker/Documents/bootstramp/coreui/dist;
+            index index.html index.htm;
+        }
+        location /health {
+            return 200 'ok';
+        }
+    }
+
+    server  {
+        listen 80;
+        server_name aginx.x.do;
+        location / {
+            proxy_pass http://t1;
+            gzip on;
+        }
+    }
+
+    server  {
+        listen 80;
+        server_name test.renzhen.la;
+        location / {
+            proxy_pass http://t2;
+            proxy_set_header Host $host;
+        }
+    }
+}
+</code></pre>
+<p>先来个demo来看看：</p>
+<pre><code class="language-nginx">package main
+
+import (
+    &quot;fmt&quot;
+    &quot;github.com/ihaiker/ngx/v2/config&quot;
+    &quot;github.com/ihaiker/ngx/v2/query&quot;
+)
+
+func main() {
+    conf, err := config.Parse(&quot;./nginx.conf&quot;)
+    if err != nil {
+        panic(err)
+    }
+    // ----- 执行查询 ------
+    items, err := query.Select(conf, &quot;.http.upstream&quot;)
+    if err != nil {
+        panic(err)
+    }
+    fmt.Println(&quot;包含 upstream：&quot;, len(items))
+
+    upstreamT1 := items[0]
+    fmt.Println(&quot;upstream t1 name: &quot;,upstreamT1.Args[0])
+    fmt.Println(&quot;upstream t1 server value:&quot;,upstreamT1.Body.Get(&quot;server&quot;).Args[0])
+
+    upstreamT2 := items[1]
+    fmt.Println(&quot;upstream t2 name: &quot;,upstreamT2.Args[0])
+    fmt.Println(&quot;upstream t2 server value:&quot;,upstreamT2.Body.Get(&quot;server&quot;).Args[0])
+
+    upstreamT3 := items[2]
+    fmt.Println(&quot;upstream t3 name: &quot;,upstreamT3.Args[0])
+    fmt.Println(&quot;upstream t3 server value:&quot;,upstreamT3.Body.Get(&quot;server&quot;).Args[0])
+}
+</code></pre>
+<h2 id="_1">语法介绍</h2>
+<p>看了这个demo你你是不要有点对于pql感觉有熟悉的感觉呢？没错，本工具在设计上借鉴了json查询工具<a href="https://stedolan.github.io/jq/" title="JQ">jq</a>和yaml查询工具<a href="https://mikefarah.gitbook.io/yq/" title="YQ">yq</a>。并且语法上基本一致。</p>
+<p>下面我们就来详细说明PQL语法。</p>
+<h3 id="_2"><code>.</code> 指令</h3>
+<p>直接查询配置文件当前节点。</p>
+<h3 id="namenamesubname"><code>.name</code>或<code>.name.subname</code> 指令</h3>
+<p>查询<code>name</code>或者<code>name</code>底下<code>subname</code>配置项，因为<code>ngx</code>配置可以允许配置项名称重复，所以无论如何查询都返回的内容都是数组。</p>
+<p>例如：</p>
+<pre><code class="language-shell">.http.server.server_name
+</code></pre>
+<p>可以查询nginx配置文件中所有的server_name，输入如下：</p>
+<pre><code class="language-nginx">server_name _;
+server_name aginx.x.do;
+server_name test.renzhen.la;
+</code></pre>
+<h3 id="namenamenamename"><code>.!name</code>，<code>.@name</code>，<code>.^name</code>，<code>.$name</code> 指令</h3>
+<table>
+<thead>
+<tr>
+<th>表述符</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>!</td>
+<td>配置名称不等于name的配置项</td>
+</tr>
+<tr>
+<td>@</td>
+<td>配置名称包含name的配置项</td>
+</tr>
+<tr>
+<td>^</td>
+<td>配置名称以name开头的配置项</td>
+</tr>
+<tr>
+<td>$</td>
+<td>配置名称以name结尾的配置项</td>
+</tr>
+</tbody>
+</table>
+<h3 id="regex"><code>./Regex/</code> 指令</h3>
+<p>查找配置项名称符合<strong>Regex</strong>正则的配置项。</p>
+<p>例如：</p>
+<pre><code class="language-shell">.http./(server|upstream)/
+</code></pre>
+<p>查询<strong>http</strong>下面所有的<strong>server</strong>和<strong>upstream</strong></p>
+<h3 id="name0"><code>.name[0]</code> 指令</h3>
+<p>查询配置名称为<code>name</code>的配置项的<strong>第一个</strong>，如果并未能查询到相应配置将会报错。</p>
+<p>为了查询方便软件也提供了以下方式：
+- <code>.name[start:end]</code>查询某个区间的配置。
+- <code>.name[start:]</code>查询从某位置开始区间配置。
+- <code>.name[:end]</code>查询开始到某个位置的区间配置。
+- <code>.name[-1]</code>查询最后一个配置。</p>
+<p>例如：</p>
+<pre><code class="language-shell">.http.server[1].server_name
+</code></pre>
+<p>输出：</p>
+<pre><code class="language-nginx">server_name aginx.x.do;
+</code></pre>
+<h3 id="namevalue"><code>.name("value")</code> 指令</h3>
+<p>查询配置中，包含value的配置项。</p>
+<p>例如：</p>
+<pre><code class="language-shell">.http.server.server_name(&quot;_&quot;)
+</code></pre>
+<p>输出：</p>
+<pre><code class="language-nginx">server_name _;
+</code></pre>
+<p>此处的value也同时支持名称查询的<code>!</code>,<code>@</code>,<code>^</code>,<code>$</code>以及<code>/value/</code>正则五种查询方式，且具有相同意思。
+例如：</p>
+<pre><code class="language-shell">.http.server.server_name($&quot;example.com&quot;)
+</code></pre>
+<p>查询nginx配置中使用了<strong>example.com</strong>一级域名的server配置</p>
+<pre><code class="language-shell">.http.server.server_name(^&quot;test.&quot;)
+</code></pre>
+<p>查询server配置中，test开始的域名配置</p>
+<h3 id="_3">" | " 管道处理</h3>
+<p>根据上次结果继续处理。
+<code>.http | .server_name</code> 和 <code>.http.server_name</code>等价。但是只是用例好像没有什么多大用处，不过此处大多是为了查询方法准备的。
+例如：</p>
+<pre><code class="language-shell">.http.server | select(.server_name, &quot;equal&quot;, &quot;_&quot;)
+</code></pre>
+<p>查询<strong>server_name</strong>为<strong>_</strong>的server配置项。</p>
+<h2 id="_4">系统查询方法</h2>
+<p>系统提供了为数不多的方法，详见下列表：</p>
+<ul>
+<li><a href="../functions/select/">select</a> </li>
+<li><a href="../functions/grammar/">ifelse,not,and,or</a></li>
+<li><a href="../functions/args/">args</a></li>
+<li><a href="../functions/">index</a></li>
+<li><a href="../functions/length/">length</a></li>
+<li><a href="../functions/args_length/">args_length</a></li>
+</ul>
+<p>注意：在上面的例子中估计你已经发了一个问题。就是select方法并不会项JQ或者YQ那样直接使用<strong>select(.server_name equal _)</strong> 这样的语法，
+主要原因是兼容所有定义的方法具有相同的语法。（这个地方需要优化...下个版本解决吧）</p>
+<h2 id="_5">自定义查询方法</h2>
+<p>为了使用自定义查询方法，你需要使用<code>query.SelectsWith(*config.Configuration, *methods.FunctionManager,string)</code> 方法，并指定查询方法管理器<code>*methods.FunctionManager</code>。
+查询方法管理器可以注册任何方法，只要符合一下条件即可。</p>
+<ul>
+<li>输入参数只能为：<code>error</code>, <code>string</code>, <code>int</code>, <code>config.Directive</code>, <code>bool</code>, <code>interface {}</code> 类型，或者对应的切片类型。</li>
+<li>输出参数最多可以有两个，且第二个必须是error类型，第一个要符合和时输入参数一样的类型。</li>
+</ul>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../hooks/" class="btn btn-neutral float-right" title="后置hook">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../marshal/" class="btn btn-neutral" title="Marshal/Unmarshal"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+      <p>Copyright @2021 Haiker</p>
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/ihaiker/ngx/" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../marshal/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../hooks/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>
