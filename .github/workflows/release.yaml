@@ -22,11 +22,7 @@ jobs:
       - name: check is release
         id: check_release
         run: |
-          num=`ls ./docs/versions/${{ steps.tagName.outputs.tag }}.md`
-          if [ ! "$?" == "0" ]; then
-            echo "::set-output name=enable::false"
-            return
-          fi
+          num=`ls ./docs/versions/*.md | grep ${{ steps.tagName.outputs.tag }} || echo ''`
           if [ "$num" == "" ] ; then
             echo "::set-output name=enable::false"
           else
