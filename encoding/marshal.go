@@ -96,18 +96,20 @@ func MarshalOptions(v interface{}, options Options) (*config.Configuration, erro
 		}
 	case reflect.Slice:
 		if isBase(valueType.Elem()) {
-			ary := config.New("array")
-			for i := 0; i < value.Len(); i++ {
-				val := value.Index(i).Interface()
-				if vItem, err := MarshalOptions(val, options); err != nil {
-					return nil, err
-				} else {
-					for _, item := range vItem.Body {
-						ary.AddArgs(item.Args...)
+			if value.Len() > 0 {
+				ary := config.New("array")
+				for i := 0; i < value.Len(); i++ {
+					val := value.Index(i).Interface()
+					if vItem, err := MarshalOptions(val, options); err != nil {
+						return nil, err
+					} else {
+						for _, item := range vItem.Body {
+							ary.AddArgs(item.Args...)
+						}
 					}
 				}
+				items = append(items, ary)
 			}
-			items = append(items, ary)
 		} else {
 			for i := 0; i < value.Len(); i++ {
 				ary := config.New("array")
@@ -126,6 +128,10 @@ func MarshalOptions(v interface{}, options Options) (*config.Configuration, erro
 			field := value.Type().Field(i)
 			fieldValue := value.Field(i)
 
+			if field.Name[0] >= 'a' && field.Name[0] <= 'z' {
+				continue
+			}
+
 			if field.Type.Kind() == reflect.Ptr {
 				if fieldValue.IsNil() {
 					continue
@@ -136,7 +142,9 @@ func MarshalOptions(v interface{}, options Options) (*config.Configuration, erro
 			}
 
 			fieldName, format := split2(field.Tag.Get("ngx"), ",")
-			if fieldName == "" {
+			if fieldName == "-" {
+				continue
+			} else if fieldName == "" {
 				fieldName = field.Name
 			}
 			format = data_format(format, options)
@@ -156,7 +164,7 @@ func MarshalOptions(v interface{}, options Options) (*config.Configuration, erro
 							item.Name = fieldName
 							items = append(items, item)
 						}
-					} else {
+					} else if len(confItems.Body) > 0 {
 						items = append(items, config.Body(fieldName, confItems.Body...))
 					}
 				}

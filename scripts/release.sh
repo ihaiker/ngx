@@ -4,11 +4,11 @@ export BASE_PATH="$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )"
 
 tag=$1
 
-tag_commit=$(ls $BASE_PATH/../docs/versions/$tag.md)
-if [ "$tag_commit" == "" ]; then
-  echo "The tag $tag.md not found"
-  exit 1
-fi
+#tag_commit=$(ls $BASE_PATH/../docs/versions/$tag.md)
+#if [ "$tag_commit" == "" ]; then
+#  echo "The tag $tag.md not found"
+#  exit 1
+#fi
 
 tag_list=$(git tag|grep $tag)
 if [ ! "$tag_list" == "" ]; then
